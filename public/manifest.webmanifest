@@ -2,9 +2,10 @@
   "name": "Luna Cycle — Ciclo menstrual",
   "short_name": "Luna Cycle",
   "description": "Acompanhe menstruação, fluxo, sintomas e bem-estar no seu ritmo.",
-  "start_url": "/",
+  "start_url": "/Luna-Cycle/",
   "display": "standalone",
   "background_color": "#fff8f6",
   "theme_color": "#b34465",
-  "icons": []
+  "icons": [],
+  "scope": "/Luna-Cycle/"
 }
