@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { BatteryFull, Download, Trash2 } from 'lucide-react'
+import { BatteryFull, Download, Printer, Trash2 } from 'lucide-react'
 import { useApp } from '../context/AppContext.jsx'
 import { SYMPTOM_OPTIONS } from '../data/seed.js'
 import { formatDate, MOODS, todayISO, uid } from '../lib/date.js'
@@ -263,7 +263,12 @@ export function ReportsPage() {
 
   return (
     <div>
-      <PageHeader eyebrow="Análises" title="Relatórios" description="Visualize tendências do seu ciclo, sintomas e bem-estar." back onBack={() => navigate(-1)} actions={<button className="button button-secondary" onClick={exportCsv}><Download size={16} /> Exportar CSV</button>} />
+      <div className="print-header">
+        <div className="eyebrow">Luna Cycle</div>
+        <div className="print-title">Relatório do ciclo</div>
+        <p>{data.profile.name || 'Uso pessoal'} · {formatDate(todayISO())}</p>
+      </div>
+      <PageHeader eyebrow="Análises" title="Relatórios" description="Visualize tendências do seu ciclo, sintomas e bem-estar." back onBack={() => navigate(-1)} actions={<div className="row wrap"><button className="button button-secondary" onClick={exportCsv}><Download size={16} /> Exportar CSV</button><button className="button button-secondary" onClick={() => window.print()}><Printer size={16} /> Imprimir / PDF</button></div>} />
       <Tabs items={[{ id: 'symptoms', label: 'Sintomas' }, { id: 'hormones', label: 'Hormônios' }, { id: 'weight', label: 'Peso' }]} active={tab} onChange={setTab} />
       <div style={{ height: 16 }} />
       {tab === 'symptoms' && (

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { createUser, hashPassword, loadDb, normalizeUserData, saveDb } from './storage.js'
-import { createDefaultData } from '../data/seed.js'
+import { createDefaultData, createEmptyData } from '../data/seed.js'
 
 const AppContext = createContext(null)
 const LOCK_KEY = 'luna-cycle:locked'
@@ -202,13 +202,19 @@ export function AppProvider({ children }) {
 
   const resetData = useCallback(() => {
     updateData((current) => {
-      const fresh = createDefaultData(current.profile.name, current.profile.email, 'cycle')
+      const fresh = currentUser?.demo
+        ? createDefaultData(current.profile.name, current.profile.email, 'cycle')
+        : createEmptyData(current.profile.name, current.profile.email)
       return {
         ...fresh,
-        settings: { ...fresh.settings, ...current.settings },
+        settings: {
+          ...fresh.settings,
+          ...current.settings,
+          onboardingComplete: Boolean(currentUser?.demo),
+        },
       }
     })
-  }, [updateData])
+  }, [updateData, currentUser?.demo])
 
   const importData = useCallback((input) => {
     try {

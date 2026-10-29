@@ -3,13 +3,16 @@ import { Link, useNavigate } from 'react-router-dom'
 import { CalendarDays, Plus, Trash2 } from 'lucide-react'
 import { useApp } from '../context/AppContext.jsx'
 import { useQuickLog } from '../hooks/useQuickLog.js'
-import { addDaysISO, formatDate, relativeLabel, todayISO, uid } from '../lib/date.js'
-import { getActivePeriod, getCycleInfo, getDayMeta } from '../lib/cycle.js'
+import { addDaysISO, daysBetween, formatDate, relativeLabel, todayISO, uid } from '../lib/date.js'
+import {
+  getActivePeriod, getCurrentPhaseKey, getCycleInfo, getCycleIntervalPoints,
+  getDayMeta, getPhaseDefinitions, getPredictedPeriodStarts,
+} from '../lib/cycle.js'
 import CalendarView from '../components/CalendarView.jsx'
 import { AppIcon } from '../components/AppIcon.jsx'
 import { PeriodFlowArt } from '../components/CycleArt.jsx'
 import {
-  Badge, BarChart, Card, Field, Icon, IconCircle, LineChart, ListRow, Modal,
+  Badge, BarChart, Card, EmptyState, Field, Icon, IconCircle, LineChart, ListRow, Modal,
   PageHeader, SectionTitle, StatCard, Tabs,
 } from '../components/ui.jsx'
 
@@ -212,9 +215,22 @@ export function MenstruationPage() {
 
   const remove = (id) => {
     if (!window.confirm('Excluir este registro de menstruação?')) return
-    updateData((current) => ({ cycle: { ...current.cycle, entries: current.cycle.entries.filter((item) => item.id !== id) } }))
+    const entry = data.cycle.entries.find((item) => item.id === id)
+    if (!entry) return
+    const duration = entry.duration || data.settings.periodLength || 5
+    const entryDates = new Set(Array.from({ length: duration }).map((_, index) => addDaysISO(entry.startDate, index)))
+    updateData((current) => ({
+      cycle: { ...current.cycle, entries: current.cycle.entries.filter((item) => item.id !== id) },
+      periodDays: (current.periodDays || []).filter((item) => !entryDates.has(item.date)),
+    }))
     showToast('Registro excluído.')
   }
+
+  const nextPeriodCopy = !info.day
+    ? 'Registre o primeiro dia da sua menstruação para começar as previsões.'
+    : info.isLate
+      ? `A previsão era para ${formatDate(info.nextPeriod, "d 'de' MMMM")} — ${info.daysLate === 1 ? '1 dia atrás' : `${info.daysLate} dias atrás`}. Se ela chegou, registre para atualizar seu ciclo.`
+      : `Faltam ${info.daysToNext} ${info.daysToNext === 1 ? 'dia' : 'dias'} para a próxima previsão. Se ela chegou antes, comece com um toque — você pode desfazer.`
 
   return (
     <div>
@@ -236,7 +252,7 @@ export function MenstruationPage() {
           <div>
             <div className="eyebrow">Registro rápido</div>
             <h2>A menstruação começou hoje?</h2>
-            <p>Faltam {info.daysToNext} dias para a próxima previsão. Se ela chegou antes, comece com um toque — você pode desfazer.</p>
+            <p>{nextPeriodCopy}</p>
           </div>
           <button type="button" className="button button-primary" onClick={startPeriod}><AppIcon name="check" size={17} /> Sim, começou hoje</button>
         </Card>
@@ -265,8 +281,11 @@ export function MenstruationPage() {
         </div>
         <div className="stack">
           <Card>
-            <SectionTitle title="Histórico" subtitle={`${history.length} ciclos registrados`} />
+            <SectionTitle title="Histórico" subtitle={`${history.length} ${history.length === 1 ? 'ciclo registrado' : 'ciclos registrados'}`} />
             <div className="stack-tight">
+              {history.length === 0 && (
+                <EmptyState icon="drop" title="Seu histórico começa aqui" description="Registre o primeiro dia da menstruação para acompanhar a duração dos seus ciclos." />
+              )}
               {history.map((entry) => (
                 <div className="list-row" key={entry.id}>
                   <span className="icon-circle icon-rose"><AppIcon name="drop" size={20} /></span>
@@ -283,59 +302,47 @@ export function MenstruationPage() {
   )
 }
 
-function dayRange(start, end) {
-  return start === end ? `Dia ${start}` : `Dias ${start}–${end}`
+const phaseDetails = {
+  menstruation: {
+    icon: 'drop',
+    tone: 'rose',
+    description: 'O endométrio se desprende e o ciclo recomeça. Cólicas, cansaço e fluxo variável são comuns — vale pegar mais leve.',
+  },
+  follicular: {
+    icon: 'leaf',
+    tone: 'green',
+    description: 'Os folículos amadurecem e o estrogênio aumenta. A energia costuma subir e o corpo se prepara para ovular.',
+  },
+  ovulation: {
+    icon: 'sparkles',
+    tone: 'purple',
+    description: 'Um óvulo é liberado e fica viável por cerca de 24 horas. É o pico da fase fértil — uma estimativa do seu ciclo.',
+  },
+  luteal: {
+    icon: 'moon',
+    tone: 'peach',
+    description: 'A progesterona predomina e o corpo se prepara para uma nova menstruação. Inchaço, seios sensíveis e humor variável podem aparecer.',
+  },
 }
 
-function CyclePhasesGuide({ info, periodLength }) {
-  const phases = [
-    {
-      key: 'menstruation',
-      label: 'Menstruação',
-      range: dayRange(1, periodLength),
-      icon: 'drop',
-      tone: 'rose',
-      description: 'O endométrio se desprende e o ciclo recomeça. Cólicas, cansaço e fluxo variável são comuns — vale pegar mais leve.',
-    },
-    {
-      key: 'follicular',
-      label: 'Fase folicular',
-      range: dayRange(periodLength + 1, info.ovulationDay - 1),
-      icon: 'leaf',
-      tone: 'green',
-      description: 'Os folículos amadurecem e o estrogênio aumenta. A energia costuma subir e o corpo se prepara para ovular.',
-    },
-    {
-      key: 'ovulation',
-      label: 'Ovulação',
-      range: `Dia ${info.ovulationDay}`,
-      icon: 'sparkles',
-      tone: 'purple',
-      description: 'Um óvulo é liberado e fica viável por cerca de 24 horas. É o pico da fase fértil — uma estimativa do seu ciclo.',
-    },
-    {
-      key: 'luteal',
-      label: 'Fase lútea',
-      range: dayRange(info.ovulationDay + 1, info.length),
-      icon: 'moon',
-      tone: 'peach',
-      description: 'A progesterona predomina e o corpo se prepara para uma nova menstruação. Inchaço, seios sensíveis e humor variável podem aparecer.',
-    },
-  ]
-  const current = info.day <= periodLength
-    ? 'menstruation'
-    : info.day === info.ovulationDay
-      ? 'ovulation'
-      : info.day < info.ovulationDay
-        ? 'follicular'
-        : 'luteal'
+function CyclePhasesGuide({ info }) {
+  const phases = getPhaseDefinitions(info).map((phase) => ({ ...phase, ...phaseDetails[phase.key] }))
+  const current = getCurrentPhaseKey(info)
+  const badge = !info.day
+    ? 'Sem registro'
+    : info.isLate
+      ? `Dia ${info.day} · ${info.daysLate} ${info.daysLate === 1 ? 'dia' : 'dias'} de atraso`
+      : `Dia ${info.day} de ${info.length}`
+  const sourceNote = info.stats.source === 'history'
+    ? `As fases usam a mediana dos seus últimos ${info.cycleCount} ${info.cycleCount === 1 ? 'ciclo' : 'ciclos'} (${info.length} dias) e podem variar a cada mês.`
+    : `As fases usam a duração de referência de ${info.length} dias. Registre mais ciclos para personalizar a estimativa.`
 
   return (
     <Card className="cycle-phases-card">
       <SectionTitle
         title="Entenda as fases do seu ciclo"
         subtitle="O que acontece no corpo em cada etapa"
-        action={<Badge tone="neutral">Dia {info.day} de {info.length}</Badge>}
+        action={<Badge tone="neutral">{badge}</Badge>}
       />
       <div className="cycle-phase-list">
         {phases.map((phase) => (
@@ -352,7 +359,7 @@ function CyclePhasesGuide({ info, periodLength }) {
           </div>
         ))}
       </div>
-      <p className="cycle-phase-note"><AppIcon name="info" size={14} /> As fases usam a sua duração média de {info.length} dias e podem variar a cada ciclo. As previsões não substituem um método contraceptivo.</p>
+      <p className="cycle-phase-note"><AppIcon name="info" size={14} /> {sourceNote} As previsões não substituem um método contraceptivo.</p>
     </Card>
   )
 }
@@ -364,6 +371,12 @@ export function MyCyclePage() {
   const [settings, setSettings] = useState({ cycleLength: String(data.settings.cycleLength), periodLength: String(data.settings.periodLength) })
   const history = [...data.cycle.entries].sort((a, b) => b.startDate.localeCompare(a.startDate))
   const info = getCycleInfo(data)
+  const intervalPoints = useMemo(() => getCycleIntervalPoints(data), [data])
+  const futureStarts = useMemo(
+    () => getPredictedPeriodStarts(data, todayISO(), 8).filter((date) => date > todayISO()).slice(0, 3),
+    [data],
+  )
+  const confidenceTone = info.confidence === 'alta' ? 'green' : info.confidence === 'média' ? 'yellow' : 'neutral'
 
   const saveSettings = (event) => {
     event.preventDefault()
@@ -379,22 +392,33 @@ export function MyCyclePage() {
       {tab === 'summary' && (
         <div className="stack">
           <div className="grid grid-4">
-            <StatCard icon="CalendarDays" label="Duração do ciclo" value={`${info.length} dias`} hint="Média configurada" />
-            <StatCard icon="Droplet" label="Duração da menstruação" value={`${data.settings.periodLength} dias`} hint="Média configurada" tone="rose" />
+            <StatCard icon="CalendarDays" label="Duração do ciclo" value={`${info.length} dias`} hint={info.stats.source === 'history' ? `Mediana dos últimos ${info.cycleCount} ciclos` : 'Duração de referência'} />
+            <StatCard icon="Droplet" label="Duração da menstruação" value={`${info.periodLength} dias`} hint="Duração média" tone="rose" />
             <StatCard icon="Heart" label="Fase fértil" value={`${info.fertileStart} ao ${info.fertileEnd}`} hint="Dias do ciclo" tone="green" />
-            <StatCard icon="Sparkles" label="Ovulação estimada" value={`Dia ${info.ovulationDay}`} hint="Previsão" tone="purple" />
+            <StatCard icon="Sparkles" label="Ovulação estimada" value={`Dia ${info.ovulationDay}`} hint={`Confiança ${info.confidence}`} tone="purple" />
           </div>
-          <CyclePhasesGuide info={info} periodLength={data.settings.periodLength || 5} />
+          <CyclePhasesGuide info={info} />
           <div className="split-even">
             <Card>
-              <SectionTitle title="Seu ciclo em números" subtitle="Baseado nos seus registros" />
-              <BarChart data={history.slice(0, 6).reverse().map((entry) => ({ label: formatDate(entry.startDate, 'MMM').replace('.', ''), value: entry.duration }))} suffix="d" />
+              <SectionTitle
+                title="Seu ciclo em números"
+                subtitle={intervalPoints.length ? 'Intervalos entre os últimos registros' : 'Baseado nos seus registros'}
+                action={<Badge tone={confidenceTone}>Confiança {info.confidence}</Badge>}
+              />
+              {intervalPoints.length > 0 ? (
+                <BarChart
+                  data={intervalPoints.map((point) => ({ label: formatDate(point.date, 'MMM').replace('.', ''), value: point.days }))}
+                  suffix="d"
+                />
+              ) : (
+                <EmptyState icon="chart" title="Ainda faltam registros" description="Com pelo menos dois inícios de menstruação, mostramos aqui a duração real dos seus ciclos." />
+              )}
             </Card>
             <Card>
               <SectionTitle title="Ajustar meu ciclo" subtitle="Personalize as previsões" />
               <form className="stack-tight" onSubmit={saveSettings}>
                 <div className="form-grid">
-                  <Field label="Duração média do ciclo"><select value={settings.cycleLength} onChange={(event) => setSettings({ ...settings, cycleLength: event.target.value })}>{Array.from({ length: 18 }).map((_, index) => index + 21).map((value) => <option key={value} value={value}>{value} dias</option>)}</select></Field>
+                  <Field label="Duração de referência" hint="Usada quando ainda não há histórico suficiente."><select value={settings.cycleLength} onChange={(event) => setSettings({ ...settings, cycleLength: event.target.value })}>{Array.from({ length: 18 }).map((_, index) => index + 21).map((value) => <option key={value} value={value}>{value} dias</option>)}</select></Field>
                   <Field label="Duração da menstruação"><select value={settings.periodLength} onChange={(event) => setSettings({ ...settings, periodLength: event.target.value })}>{[2, 3, 4, 5, 6, 7, 8].map((value) => <option key={value} value={value}>{value} dias</option>)}</select></Field>
                 </div>
                 <button className="button button-primary" type="submit">Salvar preferências</button>
@@ -405,11 +429,14 @@ export function MyCyclePage() {
       )}
       {tab === 'history' && (
         <Card>
-          <SectionTitle title="Histórico de ciclos" subtitle="Toque em um registro para acompanhar a evolução" />
+          <SectionTitle title="Histórico de ciclos" subtitle="Cada intervalo mostra a duração real entre dois inícios" />
           <div className="stack-tight">
+            {history.length === 0 && (
+              <EmptyState icon="drop" title="Nenhum ciclo registrado" description="Comece registrando o primeiro dia da sua menstruação." action={<Link to="/app/menstruation" className="button button-primary">Registrar menstruação</Link>} />
+            )}
             {history.map((entry, index) => {
               const previous = history[index + 1]
-              const gap = previous ? Math.abs((new Date(entry.startDate) - new Date(previous.startDate)) / 86400000) : null
+              const gap = previous ? daysBetween(entry.startDate, previous.startDate) : null
               return <ListRow key={entry.id} icon="CalendarDays" title={formatDate(entry.startDate, "MMMM 'de' yyyy")} description={`Iniciado em ${formatDate(entry.startDate, 'dd/MM')} · ${entry.duration} dias · fluxo ${entry.flow}`} meta={gap ? `${Math.round(gap)} dias de ciclo` : 'Registro inicial'} />
             })}
           </div>
@@ -420,16 +447,28 @@ export function MyCyclePage() {
           <Card className="center">
             <IconCircle icon="Sparkles" tone="lavender" size="large" />
             <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 28, margin: '14px 0 5px' }}>Próxima menstruação</h2>
-            <p className="muted small">Previsão para {formatDate(info.nextPeriod, "d 'de' MMMM 'de' yyyy")}</p>
-            <Badge tone="rose">Em {info.daysToNext} dias</Badge>
+            {!info.day ? (
+              <EmptyState icon="calendar" title="Ainda sem previsão" description="Registre o primeiro dia da menstruação para começar a estimar os próximos ciclos." action={<Link to="/app/menstruation" className="button button-primary">Registrar agora</Link>} />
+            ) : (
+              <>
+                <p className="muted small">Previsão para {formatDate(info.nextPeriod, "d 'de' MMMM 'de' yyyy")}</p>
+                {info.stats.rangeDays > 0 && (
+                  <p className="muted small">Janela provável: {formatDate(info.predictionStart, 'dd/MM')} a {formatDate(info.predictionEnd, 'dd/MM')}.</p>
+                )}
+                <Badge tone="rose">{info.isLate ? `Atrasada há ${info.daysLate} ${info.daysLate === 1 ? 'dia' : 'dias'}` : info.daysToNext === 0 ? 'Prevista hoje' : `Em ${info.daysToNext} ${info.daysToNext === 1 ? 'dia' : 'dias'}`}</Badge>
+                {info.isLate && <p className="muted small" style={{ marginTop: 12 }}>Se a menstruação já chegou, registre para atualizar seu ciclo. Se o atraso continuar, vale conversar com uma profissional de saúde.</p>}
+              </>
+            )}
           </Card>
           <Card>
-            <SectionTitle title="Próximas previsões" subtitle="Estimativas baseadas na sua média" />
+            <SectionTitle title="Próximas previsões" subtitle="Estimativas baseadas no seu padrão" />
             <div className="stack-tight">
-              {[0, 1, 2].map((index) => {
-                const date = addDaysISO(info.nextPeriod, index * info.length)
-                return <ListRow key={date} icon="Droplet" title={`Ciclo ${index + 1}`} description={`${formatDate(date, 'dd/MM/yyyy')} a ${formatDate(addDaysISO(date, data.settings.periodLength - 1), 'dd/MM/yyyy')}`} meta={relativeLabel(date)} />
-              })}
+              {futureStarts.length === 0 && (
+                <EmptyState icon="calendar" title="Nada para prever ainda" description="As próximas datas aparecem depois do primeiro registro." />
+              )}
+              {futureStarts.map((date, index) => (
+                <ListRow key={date} icon="Droplet" title={`Ciclo ${index + 1}`} description={`${formatDate(date, 'dd/MM/yyyy')} a ${formatDate(addDaysISO(date, info.periodLength - 1), 'dd/MM/yyyy')}`} meta={relativeLabel(date)} />
+              ))}
               <div className="info-callout"><IconCircle icon="Info" tone="blue" /><div><h3>Previsões são estimativas</h3><p>Ciclos podem variar com estresse, sono, saúde e outros fatores. Use as previsões como apoio, não como método contraceptivo.</p></div></div>
             </div>
           </Card>

@@ -8,6 +8,7 @@ import { ALL_LINKS, getBottomNav, getLink, getNavigation } from '../data/navigat
 import { getCycleInfo } from '../lib/cycle.js'
 import { relativeLabel } from '../lib/date.js'
 import { useApp } from '../context/AppContext.jsx'
+import { useReminderAlerts } from '../hooks/useReminderAlerts.js'
 import { Avatar, Icon, Logo, Modal } from './ui.jsx'
 import { AppIcon } from './AppIcon.jsx'
 import { CycleOrbitArt } from './CycleArt.jsx'
@@ -35,7 +36,7 @@ function JourneyCard() {
         </div>
         <div className="journey-card-progress"><span style={{ width: `${Math.max(4, Math.round(info.progress * 100))}%` }} /></div>
         <div className="journey-card-meta">
-          <span>Dia {info.day} de {info.length}</span>
+          <span>{!info.day ? 'Sem registro' : info.isLate ? `Dia ${info.day} · atrasada` : `Dia ${info.day} de ${info.length}`}</span>
           <span data-sensitive>{discreet ? 'Acompanhamento' : info.phaseName}</span>
         </div>
         <Link to="/app/my-cycle" className="journey-card-link">Ver meu ciclo <Icon name="ArrowUpRight" size={14} /></Link>
@@ -163,6 +164,13 @@ export default function AppShell() {
   const currentLink = getLink(location.pathname)
   const info = getCycleInfo(data)
 
+  useReminderAlerts({
+    data,
+    enabled: data?.settings?.notifications?.browser === true && data?.settings?.notifications?.reminders === true,
+    discreet,
+    userId: currentUser?.id,
+  })
+
   useEffect(() => {
     setMobileMenuOpen(false)
     setNotificationsOpen(false)
@@ -233,7 +241,7 @@ export default function AppShell() {
             </button>
             <div className="topbar-cycle-badge" title="Dia do ciclo">
               <AppIcon name="cycle" size={16} />
-              <span>{discreet ? 'Seu ciclo' : `Dia ${info.day} · ${info.phaseName}`}</span>
+              <span>{discreet ? 'Seu ciclo' : info.day ? `Dia ${info.day} · ${info.phaseName}` : 'Sem registro'}</span>
             </div>
             <button type="button" className={`icon-button privacy-trigger ${discreet ? 'is-active' : ''}`} onClick={() => setPrivacyOpen((value) => !value)} aria-label="Privacidade" aria-expanded={privacyOpen}>
               {discreet ? <EyeOff size={19} /> : <ShieldCheck size={19} />}

@@ -9,6 +9,7 @@ import CalendarView from '../components/CalendarView.jsx'
 import { BabyArt, DecorativeLeaf } from '../components/Art.jsx'
 import { AppIcon } from '../components/AppIcon.jsx'
 import { Card, EmptyState, Field, Icon, IconCircle, ListRow, Modal, PageHeader, Pill, SectionTitle, StatCard } from '../components/ui.jsx'
+import { InstallAppCard } from '../components/Pwa.jsx'
 import { ALL_LINKS } from '../data/navigation.js'
 
 const categories = ['Todos', 'Alimentação', 'Exercício', 'Sono', 'Saúde mental', 'Ciclo']
@@ -299,6 +300,7 @@ export function MoreMenuPage() {
     <div>
       <PageHeader eyebrow="Navegação" title="Mais" description="Todas as áreas do seu ciclo em um só lugar." back onBack={() => navigate(-1)} />
       <div className="stack">
+        <InstallAppCard />
         {groups.map(([group, links]) => (
           <Card key={group}>
             <SectionTitle title={group} />

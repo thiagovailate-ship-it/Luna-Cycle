@@ -4,10 +4,22 @@ import { Accessibility, BellRing, Check, CircleHelp, CloudDownload, Contrast, Do
   FileUp, LockKeyhole, LogOut, Pencil, Plus, RefreshCw, Trash2, Type,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext.jsx'
-import { addDaysISO, formatDate, relativeLabel, todayISO, uid } from '../lib/date.js'
+import { addDaysISO, daysBetween, formatDate, relativeLabel, todayISO, uid } from '../lib/date.js'
+import { BACKUP_MIN_PASSPHRASE, decryptBackup, encryptBackup, isEncryptedBackup } from '../lib/backup.js'
 import { Avatar, Badge, Card, EmptyState, Field, Icon, IconCircle, ListRow, Modal, PageHeader, SectionTitle, Tabs, Toggle } from '../components/ui.jsx'
+import { BrowserAlertsToggle } from '../components/Pwa.jsx'
 
-const emptyReminder = { title: '', description: '', date: addDaysISO(todayISO(), 1), time: '09:00', category: 'Consultas' }
+const emptyReminder = { title: '', description: '', date: addDaysISO(todayISO(), 1), time: '09:00', category: 'Ciclo' }
+
+function downloadJson(payload, filename) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
 
 export function RemindersPage() {
   const { data, updateData, showToast } = useApp()
@@ -112,11 +124,12 @@ export function NotificationsPage() {
         </Card>
         <div className="stack">
           <Card className="card-blush"><SectionTitle title="Preferências" subtitle="Escolha o que deseja receber" /><div className="stack-tight">
+            <BrowserAlertsToggle />
             <Toggle label="Lembretes" description="Ciclo, sintomas e medicações" checked={settings.reminders} onChange={(value) => updateSetting('reminders', value)} />
-            <Toggle label="Registro de sintomas" description="Lembrete diário de check-in" checked={settings.symptoms} onChange={(value) => updateSetting('symptoms', value)} />
-            <Toggle label="Dicas do dia" description="Conteúdos de bem-estar" checked={settings.tips} onChange={(value) => updateSetting('tips', value)} />
-            <Toggle label="E-mail" description="Resumos e novidades" checked={settings.email} onChange={(value) => updateSetting('email', value)} />
-            <Toggle label="Sons" description="Alertas sonoros" checked={settings.sound} onChange={(value) => updateSetting('sound', value)} />
+            <Toggle label="Registro de sintomas (em breve)" description="Lembrete diário de check-in" checked={Boolean(settings.symptoms)} disabled onChange={() => {}} />
+            <Toggle label="Dicas do dia (em breve)" description="Conteúdos de bem-estar" checked={Boolean(settings.tips)} disabled onChange={() => {}} />
+            <Toggle label="E-mail (em breve)" description="Ainda não enviamos e-mails nesta versão" checked={Boolean(settings.email)} disabled onChange={() => {}} />
+            <Toggle label="Sons (em breve)" description="Alertas sonoros ainda não estão disponíveis" checked={Boolean(settings.sound)} disabled onChange={() => {}} />
           </div></Card>
           <Card><SectionTitle title="Testar notificação" /><p className="muted small">Crie uma notificação local para conferir a central de avisos.</p><button className="button button-primary button-block" style={{ marginTop: 12 }} onClick={() => { updateData((current) => ({ notifications: [{ id: uid('notif'), title: 'Notificação de teste', description: 'Tudo funcionando por aqui!', date: todayISO(), time: new Date().toTimeString().slice(0, 5), read: false, category: 'Teste' }, ...current.notifications] })); showToast('Notificação de teste criada.') }}><BellRing size={16} /> Criar notificação</button></Card>
         </div>
@@ -126,11 +139,14 @@ export function NotificationsPage() {
 }
 
 export function ProfilePage() {
-  const { data, currentUser, updateProfile, logout, showToast } = useApp()
+  const { data, currentUser, updateProfile, updateData, logout, showToast } = useApp()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ ...data.profile })
   const profile = data.profile
+  const lastBackup = data.settings.lastBackupAt
+  const hasRecords = data.cycle.entries.length + data.symptoms.length + data.reminders.length > 0
+  const backupDue = hasRecords && (!lastBackup || daysBetween(todayISO(), lastBackup) >= 30)
 
   const save = (event) => {
     event.preventDefault()
@@ -143,14 +159,9 @@ export function ProfilePage() {
     navigate('/welcome', { replace: true })
   }
   const exportData = () => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `luna-cycle-backup-${todayISO()}.json`
-    link.click()
-    URL.revokeObjectURL(url)
-    showToast('Backup exportado.')
+    downloadJson({ version: 1, exportedAt: new Date().toISOString(), data }, `luna-cycle-backup-${todayISO()}.json`)
+    updateData((current) => ({ settings: { ...current.settings, lastBackupAt: todayISO() } }))
+    showToast('Cópia simples exportada. Para proteger com senha, use Configurações → Dados.')
   }
 
   return (
@@ -169,9 +180,16 @@ export function ProfilePage() {
           </div></Card>
         </div>
         <div className="stack">
+          {backupDue && (
+            <Card className="card-blush">
+              <SectionTitle title="Proteja sua cópia" subtitle="Seus dados vivem só neste navegador" />
+              <p className="muted small" style={{ marginTop: 0 }}>Exporte um backup protegido para não perder seus registros ao limpar o navegador ou trocar de dispositivo.</p>
+              <button className="button button-primary button-block" onClick={() => navigate('/app/settings', { state: { tab: 'data' } })}><CloudDownload size={16} /> Ir para backup</button>
+            </Card>
+          )}
           <Card className="card-blush center"><IconCircle icon="Heart" tone="rose" size="large" /><h3 style={{ fontFamily: 'var(--font-serif)', fontSize: 25, margin: '13px 0 5px' }}>Você está fazendo um ótimo trabalho!</h3><p className="muted small">Cuide de você com amor. Cada pequeno registro conta.</p></Card>
           <Card><SectionTitle title="Seus dados" /><div className="stack-tight"><ListRow icon="Stethoscope" title="Sintomas registrados" description="Histórico de bem-estar" meta={data.symptoms.length} /><ListRow icon="Droplet" title="Registros de menstruação" description="Histórico do ciclo" meta={data.cycle.entries.length} tone="blue" /><ListRow icon="BellRing" title="Lembretes" description="Rotina de cuidados" meta={data.reminders.length} tone="green" /></div></Card>
-          <Card><SectionTitle title="Conta" /><button className="button button-secondary button-block" onClick={exportData}><Download size={16} /> Exportar meus dados</button><button className="button button-danger button-block" style={{ marginTop: 9 }} onClick={doLogout}><LogOut size={16} /> Sair</button></Card>
+          <Card><SectionTitle title="Conta" /><button className="button button-secondary button-block" onClick={exportData}><Download size={16} /> Baixar cópia simples (JSON)</button><button className="button button-danger button-block" style={{ marginTop: 9 }} onClick={doLogout}><LogOut size={16} /> Sair</button></Card>
         </div>
       </div>
       <Modal open={open} onClose={() => setOpen(false)} title="Editar perfil" description="Atualize suas informações pessoais." footer={<><button className="button button-secondary" onClick={() => setOpen(false)}>Cancelar</button><button type="submit" form="profile-form" className="button button-primary">Salvar</button></>}>
@@ -191,7 +209,7 @@ export function ProfilePage() {
 
 export function SettingsPage() {
   const {
-    data, updateData, resetData, importData, deleteAccount,
+    data, currentUser, updateData, resetData, importData, deleteAccount,
     showToast, setDiscreet, setPrivacySetting, setAccessibilitySetting, lockApp,
     privacy, accessibility, discreet,
   } = useApp()
@@ -199,6 +217,11 @@ export function SettingsPage() {
   const location = useLocation()
   const [tab, setTab] = useState(location.state?.tab || 'notifications')
   const [cycleForm, setCycleForm] = useState({ cycleLength: String(data.settings.cycleLength), periodLength: String(data.settings.periodLength) })
+  const [exportOpen, setExportOpen] = useState(false)
+  const [exportForm, setExportForm] = useState({ password: '', confirm: '' })
+  const [importPayload, setImportPayload] = useState(null)
+  const [importPassword, setImportPassword] = useState('')
+  const [importBusy, setImportBusy] = useState(false)
   const settings = data.settings
 
   useEffect(() => {
@@ -206,36 +229,92 @@ export function SettingsPage() {
   }, [location.state])
 
   const updateNotification = (key, value) => updateData((current) => ({ settings: { ...current.settings, notifications: { ...current.settings.notifications, [key]: value } } }))
-  const updatePrivacy = (key, value) => updateData((current) => ({ settings: { ...current.settings, privacy: { ...current.settings.privacy, [key]: value } } }))
+  const markBackup = () => updateData((current) => ({ settings: { ...current.settings, lastBackupAt: todayISO() } }))
   const saveCycle = (event) => {
     event.preventDefault()
     updateData((current) => ({ settings: { ...current.settings, cycleLength: Number(cycleForm.cycleLength), periodLength: Number(cycleForm.periodLength) } }))
     showToast('Configurações do ciclo salvas.')
   }
-  const exportBackup = () => {
-    const blob = new Blob([JSON.stringify({ version: 1, data }, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `luna-cycle-backup-${todayISO()}.json`
-    link.click()
-    URL.revokeObjectURL(url)
+  const exportPlain = () => {
+    downloadJson({ version: 1, exportedAt: new Date().toISOString(), data }, `luna-cycle-backup-${todayISO()}.json`)
+    markBackup()
+    showToast('Cópia simples exportada. Ela não tem senha.')
+  }
+  const exportProtected = async (event) => {
+    event.preventDefault()
+    if (exportForm.password.length < BACKUP_MIN_PASSPHRASE) {
+      showToast(`Use pelo menos ${BACKUP_MIN_PASSPHRASE} caracteres.`, 'error')
+      return
+    }
+    if (exportForm.password !== exportForm.confirm) {
+      showToast('As senhas não conferem.', 'error')
+      return
+    }
+    try {
+      const payload = await encryptBackup(data, exportForm.password)
+      downloadJson(payload, `luna-cycle-backup-protegido-${todayISO()}.json`)
+      markBackup()
+      setExportOpen(false)
+      setExportForm({ password: '', confirm: '' })
+      showToast('Backup protegido exportado. Guarde a senha com cuidado.')
+    } catch (error) {
+      showToast(error.message, 'error')
+    }
   }
   const readBackup = (event) => {
     const file = event.target.files?.[0]
     if (!file) return
+    event.target.value = ''
     const reader = new FileReader()
     reader.onload = () => {
-      const result = importData(reader.result)
-      if (result.ok) showToast('Backup importado com sucesso.')
-      else showToast(result.error, 'error')
+      try {
+        const parsed = JSON.parse(String(reader.result))
+        if (isEncryptedBackup(parsed)) {
+          setImportPassword('')
+          setImportPayload(parsed)
+          return
+        }
+        const result = importData(parsed)
+        if (result.ok) showToast('Backup importado com sucesso.')
+        else showToast(result.error, 'error')
+      } catch {
+        showToast('Não foi possível ler o arquivo de backup.', 'error')
+      }
     }
     reader.readAsText(file)
+  }
+  const unlockImport = async (event) => {
+    event.preventDefault()
+    if (!importPayload) return
+    setImportBusy(true)
+    try {
+      const decrypted = await decryptBackup(importPayload, importPassword)
+      const result = importData(decrypted)
+      if (result.ok) {
+        setImportPayload(null)
+        setImportPassword('')
+        showToast('Backup importado com sucesso.')
+      } else {
+        showToast(result.error, 'error')
+      }
+    } catch (error) {
+      showToast(error.message, 'error')
+    } finally {
+      setImportBusy(false)
+    }
   }
   const doDelete = () => {
     if (!window.confirm('Tudo bem excluir sua conta local e os registros deste navegador?')) return
     deleteAccount()
     navigate('/welcome', { replace: true })
+  }
+  const doReset = () => {
+    const message = currentUser?.demo
+      ? 'Restaurar os dados de demonstração? Seus registros atuais serão substituídos.'
+      : 'Limpar todos os seus registros neste navegador? Esta ação não pode ser desfeita sem um backup.'
+    if (!window.confirm(message)) return
+    resetData()
+    showToast(currentUser?.demo ? 'Dados de demonstração restaurados.' : 'Seus registros foram limpos.')
   }
   const resetComfort = () => {
     setAccessibilitySetting('highContrast', false)
@@ -251,11 +330,12 @@ export function SettingsPage() {
       <div style={{ height: 16 }} />
 
       {tab === 'notifications' && <Card><SectionTitle title="Notificações" subtitle="Escolha como o Luna Cycle pode avisar você" />
+        <BrowserAlertsToggle />
         <Toggle label="Lembretes" description="Ciclo, sintomas e medicações" checked={settings.notifications.reminders} onChange={(value) => updateNotification('reminders', value)} />
-        <Toggle label="Registro de sintomas" description="Um lembrete suave para o check-in" checked={settings.notifications.symptoms} onChange={(value) => updateNotification('symptoms', value)} />
-        <Toggle label="Dicas do dia" description="Conteúdos de bem-estar" checked={settings.notifications.tips} onChange={(value) => updateNotification('tips', value)} />
-        <Toggle label="Notificações por e-mail" description="Resumos e novidades" checked={settings.notifications.email} onChange={(value) => updateNotification('email', value)} />
-        <Toggle label="Sons" description="Alertas sonoros" checked={settings.notifications.sound} onChange={(value) => updateNotification('sound', value)} />
+        <Toggle label="Registro de sintomas (em breve)" description="Um lembrete suave para o check-in" checked={Boolean(settings.notifications.symptoms)} disabled onChange={() => {}} />
+        <Toggle label="Dicas do dia (em breve)" description="Conteúdos de bem-estar" checked={Boolean(settings.notifications.tips)} disabled onChange={() => {}} />
+        <Toggle label="Notificações por e-mail (em breve)" description="Ainda não enviamos e-mails nesta versão" checked={Boolean(settings.notifications.email)} disabled onChange={() => {}} />
+        <Toggle label="Sons (em breve)" description="Alertas sonoros ainda não estão disponíveis" checked={Boolean(settings.notifications.sound)} disabled onChange={() => {}} />
       </Card>}
 
       {tab === 'privacy' && (
@@ -265,7 +345,7 @@ export function SettingsPage() {
             <Toggle label="Modo discreto" description="Suaviza nomes, títulos e valores sensíveis na tela." checked={discreet} onChange={setDiscreet} />
             <Toggle label="Bloqueio rápido" description="Mostra o botão de bloqueio no menu de privacidade." checked={privacy.quickLock !== false} onChange={(value) => setPrivacySetting('quickLock', value)} />
             <Toggle label="Bloqueio automático" description="Bloqueia após 5 minutos sem uso." checked={Boolean(privacy.autoLock)} onChange={(value) => setPrivacySetting('autoLock', value)} />
-            <Field label="PIN de desbloqueio (opcional)" hint="Use 4 números. Sem PIN, o desbloqueio acontece com um toque." className="stack-tight">
+            <Field label="PIN de desbloqueio (opcional)" hint="Barreira visual. O PIN não criptografa os dados locais." className="stack-tight">
               <input
                 type="password"
                 inputMode="numeric"
@@ -281,9 +361,9 @@ export function SettingsPage() {
             </div>
             <div className="divider" />
             <SectionTitle title="Seus dados" subtitle="Você continua no controle" />
-            <Toggle label="Compartilhar dados de uso" description="Ajuda a melhorar a experiência" checked={Boolean(privacy.usageData)} onChange={(value) => updatePrivacy('usageData', value)} />
-            <Toggle label="Compartilhar com profissional" description="Facilita a exportação de relatórios" checked={Boolean(privacy.shareWithProfessional)} onChange={(value) => updatePrivacy('shareWithProfessional', value)} />
-            <Toggle label="Bloqueio por biometria" description="Recurso demonstrativo" checked={Boolean(privacy.biometricLock)} onChange={(value) => updatePrivacy('biometricLock', value)} />
+            <Toggle label="Compartilhar dados de uso (em breve)" description="Nenhum dado sai deste dispositivo nesta versão" checked={Boolean(privacy.usageData)} disabled onChange={() => {}} />
+            <Toggle label="Compartilhar com profissional (em breve)" description="Por enquanto, use o relatório em PDF ou CSV" checked={Boolean(privacy.shareWithProfessional)} disabled onChange={() => {}} />
+            <Toggle label="Bloqueio por biometria (em breve)" description="Ainda não disponível neste navegador" checked={Boolean(privacy.biometricLock)} disabled onChange={() => {}} />
           </Card>
           <div className="stack">
             <Card className="card-blush center"><IconCircle icon="ShieldCheck" tone="rose" size="large" /><h3 style={{ fontFamily: 'var(--font-serif)', fontSize: 25, margin: '13px 0 5px' }}>Seus dados são locais</h3><p className="muted small">Conta e registros ficam apenas no armazenamento deste navegador.</p><Badge tone="rose">Sem servidor</Badge></Card>
@@ -315,8 +395,47 @@ export function SettingsPage() {
         </div>
       )}
 
-      {tab === 'cycle' && <Card><SectionTitle title="Preferências do ciclo" subtitle="Usadas para calcular previsões" /><form className="form-grid" onSubmit={saveCycle}><Field label="Duração média do ciclo"><select value={cycleForm.cycleLength} onChange={(event) => setCycleForm({ ...cycleForm, cycleLength: event.target.value })}>{Array.from({ length: 20 }).map((_, index) => index + 20).map((value) => <option key={value} value={value}>{value} dias</option>)}</select></Field><Field label="Duração da menstruação"><select value={cycleForm.periodLength} onChange={(event) => setCycleForm({ ...cycleForm, periodLength: event.target.value })}>{[2, 3, 4, 5, 6, 7, 8].map((value) => <option key={value} value={value}>{value} dias</option>)}</select></Field><div className="form-grid-full"><button className="button button-primary" type="submit">Salvar preferências</button></div></form></Card>}
-      {tab === 'data' && <div className="split-even"><Card><SectionTitle title="Backup e restauração" subtitle="Seus dados ficam neste navegador" /><div className="stack-tight"><button className="button button-secondary button-block" onClick={exportBackup}><CloudDownload size={16} /> Exportar backup JSON</button><label className="button button-secondary button-block"><FileUp size={16} /> Importar backup<input type="file" accept="application/json" onChange={readBackup} style={{ display: 'none' }} /></label><button className="button button-danger button-block" onClick={() => { if (window.confirm('Restaurar dados de demonstração? Seus registros atuais serão substituídos.')) { resetData(); showToast('Dados restaurados.') } }}><RefreshCw size={16} /> Restaurar dados de demonstração</button></div></Card><Card><SectionTitle title="Excluir conta" /><p className="muted small">Remove o usuário atual e todos os registros salvos neste navegador.</p><button className="button button-danger" onClick={doDelete}><Trash2 size={16} /> Excluir minha conta</button></Card></div>}
+      {tab === 'cycle' && <Card><SectionTitle title="Preferências do ciclo" subtitle="Usadas para calcular previsões" /><form className="form-grid" onSubmit={saveCycle}><Field label="Duração de referência" hint="Usada enquanto não houver histórico suficiente."><select value={cycleForm.cycleLength} onChange={(event) => setCycleForm({ ...cycleForm, cycleLength: event.target.value })}>{Array.from({ length: 20 }).map((_, index) => index + 20).map((value) => <option key={value} value={value}>{value} dias</option>)}</select></Field><Field label="Duração da menstruação"><select value={cycleForm.periodLength} onChange={(event) => setCycleForm({ ...cycleForm, periodLength: event.target.value })}>{[2, 3, 4, 5, 6, 7, 8].map((value) => <option key={value} value={value}>{value} dias</option>)}</select></Field><div className="form-grid-full"><button className="button button-primary" type="submit">Salvar preferências</button></div></form></Card>}
+      {tab === 'data' && (
+        <div className="split-even">
+          <Card>
+            <SectionTitle title="Backup e restauração" subtitle="Seus dados ficam neste navegador" />
+            <p className="muted small" style={{ marginTop: 0, lineHeight: 1.6 }}>Exporte uma cópia antes de limpar o navegador ou trocar de dispositivo. O backup protegido usa uma senha que só você conhece.</p>
+            <div className="stack-tight">
+              <button className="button button-primary button-block" onClick={() => { setExportForm({ password: '', confirm: '' }); setExportOpen(true) }}><LockKeyhole size={16} /> Exportar backup protegido</button>
+              <button className="button button-secondary button-block" onClick={exportPlain}><CloudDownload size={16} /> Exportar cópia simples</button>
+              <label className="button button-secondary button-block"><FileUp size={16} /> Importar backup<input type="file" accept="application/json,.json" onChange={readBackup} style={{ display: 'none' }} /></label>
+            </div>
+            <p className="muted small" style={{ margin: '12px 0 0' }}>{settings.lastBackupAt ? `Último backup exportado em ${formatDate(settings.lastBackupAt, 'dd/MM/yyyy')}.` : 'Nenhum backup exportado ainda.'}</p>
+          </Card>
+          <div className="stack">
+            <Card>
+              <SectionTitle title={currentUser?.demo ? 'Restaurar demonstração' : 'Recomeçar'} />
+              <p className="muted small">{currentUser?.demo ? 'Volta aos dados de exemplo deste navegador.' : 'Limpa os registros e reabre o onboarding, mantendo sua conta neste navegador.'}</p>
+              <button className="button button-danger" onClick={doReset}><RefreshCw size={16} /> {currentUser?.demo ? 'Restaurar dados de demonstração' : 'Limpar meus registros'}</button>
+            </Card>
+            <Card>
+              <SectionTitle title="Excluir conta" />
+              <p className="muted small">Remove o usuário atual e todos os registros salvos neste navegador.</p>
+              <button className="button button-danger" onClick={doDelete}><Trash2 size={16} /> Excluir minha conta</button>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      <Modal open={exportOpen} onClose={() => setExportOpen(false)} title="Exportar backup protegido" description="O arquivo só poderá ser importado com esta senha." footer={<><button className="button button-secondary" onClick={() => setExportOpen(false)}>Cancelar</button><button type="submit" form="backup-export-form" className="button button-primary">Exportar</button></>}>
+        <form id="backup-export-form" className="stack-tight" onSubmit={exportProtected}>
+          <Field label="Senha do backup" hint={`Mínimo de ${BACKUP_MIN_PASSPHRASE} caracteres.`} required><input type="password" autoComplete="new-password" value={exportForm.password} onChange={(event) => setExportForm({ ...exportForm, password: event.target.value })} /></Field>
+          <Field label="Confirme a senha" required><input type="password" autoComplete="new-password" value={exportForm.confirm} onChange={(event) => setExportForm({ ...exportForm, confirm: event.target.value })} /></Field>
+          <p className="muted small" style={{ margin: 0 }}>A senha não é salva em lugar nenhum. Anote em um lugar seguro.</p>
+        </form>
+      </Modal>
+
+      <Modal open={Boolean(importPayload)} onClose={() => setImportPayload(null)} title="Backup protegido" description="Digite a senha usada quando este arquivo foi exportado." footer={<><button className="button button-secondary" onClick={() => setImportPayload(null)}>Cancelar</button><button type="submit" form="backup-import-form" className="button button-primary" disabled={importBusy}>{importBusy ? 'Abrindo…' : 'Restaurar'}</button></>}>
+        <form id="backup-import-form" className="stack-tight" onSubmit={unlockImport}>
+          <Field label="Senha" required><input type="password" autoFocus value={importPassword} onChange={(event) => setImportPassword(event.target.value)} /></Field>
+        </form>
+      </Modal>
     </div>
   )
 }

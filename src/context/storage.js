@@ -1,4 +1,4 @@
-import { createDefaultData } from '../data/seed.js'
+import { createDefaultData, createEmptyData } from '../data/seed.js'
 import { uid } from '../lib/date.js'
 
 export const STORAGE_KEY = 'luna-cycle:database:v1'
@@ -81,11 +81,15 @@ export function loadDb() {
     const stored = window.localStorage.getItem(STORAGE_KEY)
     if (!stored) return createInitialDb()
     const parsed = JSON.parse(stored)
-    if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.users)) return createInitialDb()
-    return {
+    if (!parsed || !Array.isArray(parsed.users)) return createInitialDb()
+    const migrated = {
       ...parsed,
+      version: 1,
+      currentUserId: parsed.users.some((user) => user.id === parsed.currentUserId) ? parsed.currentUserId : null,
       users: parsed.users.map((user) => ({ ...user, data: normalizeUserData(user.data) })),
     }
+    if (parsed.version !== 1) saveDb(migrated)
+    return migrated
   } catch {
     return createInitialDb()
   }
@@ -111,6 +115,6 @@ export function createUser({ name, email, password }) {
     passwordHash: hashPassword(password, salt),
     demo: false,
     createdAt: new Date().toISOString(),
-    data: normalizeUserData(createDefaultData(cleanName, cleanEmail, 'cycle')),
+    data: normalizeUserData(createEmptyData(cleanName, cleanEmail)),
   }
 }

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 import { iconMap } from './icons.js'
 import { AppIcon } from './AppIcon.jsx'
@@ -90,10 +90,23 @@ export function Pill({ active, children, onClick, icon, type = 'button' }) {
 }
 
 export function Tabs({ items, active, onChange, className = '' }) {
+  const onKeyDown = (event) => {
+    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return
+    const current = items.findIndex((item) => item.id === active)
+    if (current < 0) return
+    event.preventDefault()
+    const next = event.key === 'ArrowRight'
+      ? (current + 1) % items.length
+      : (current - 1 + items.length) % items.length
+    onChange(items[next].id)
+    const buttons = event.currentTarget.querySelectorAll('[role="tab"]')
+    buttons[next]?.focus()
+  }
+
   return (
-    <div className={`tabs ${className}`} role="tablist">
+    <div className={`tabs ${className}`} role="tablist" onKeyDown={onKeyDown}>
       {items.map((item) => (
-        <button key={item.id} type="button" role="tab" aria-selected={active === item.id} className={`tab ${active === item.id ? 'tab-active' : ''}`} onClick={() => onChange(item.id)}>
+        <button key={item.id} type="button" role="tab" aria-selected={active === item.id} tabIndex={active === item.id ? 0 : -1} className={`tab ${active === item.id ? 'tab-active' : ''}`} onClick={() => onChange(item.id)}>
           {item.icon && <Icon name={item.icon} size={15} />}
           {item.label}
         </button>
@@ -112,35 +125,71 @@ export function Field({ label, hint, children, required, className = '' }) {
   )
 }
 
-export function Toggle({ checked, onChange, label, description }) {
+export function Toggle({ checked, onChange, label, description, disabled = false }) {
   return (
-    <label className="toggle-row">
+    <label className={`toggle-row ${disabled ? 'is-disabled' : ''}`}>
       <span>
         <strong>{label}</strong>
         {description && <small>{description}</small>}
       </span>
-      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />
       <span className="toggle-track" aria-hidden="true"><span /></span>
     </label>
   )
 }
 
 export function Modal({ open, onClose, title, description, children, footer, size = 'medium' }) {
+  const cardRef = useRef(null)
+  const closeRef = useRef(onClose)
+
+  useEffect(() => {
+    closeRef.current = onClose
+  }, [onClose])
+
   useEffect(() => {
     if (!open) return undefined
-    const onKey = (event) => event.key === 'Escape' && onClose?.()
+    const previous = document.activeElement
+    const card = cardRef.current
+    const focusables = () => {
+      if (!card) return []
+      return [...card.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+        .filter((element) => !element.disabled && element.offsetParent !== null)
+    }
+    const firstField = card?.querySelector('input:not([type="hidden"]), textarea, select')
+    ;(firstField || focusables()[0] || card)?.focus()
+
+    const onKey = (event) => {
+      if (event.key === 'Escape') {
+        closeRef.current?.()
+        return
+      }
+      if (event.key !== 'Tab') return
+      const items = focusables()
+      if (!items.length) return
+      const first = items[0]
+      const last = items[items.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
     window.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
     return () => {
       window.removeEventListener('keydown', onKey)
       document.body.style.overflow = ''
+      if (previous && typeof previous.focus === 'function') previous.focus()
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
-      <div className={`modal-card modal-${size}`} role="dialog" aria-modal="true" aria-label={title} onMouseDown={(event) => event.stopPropagation()}>
+      <div ref={cardRef} className={`modal-card modal-${size}`} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} onMouseDown={(event) => event.stopPropagation()}>
         <div className="modal-header">
           <div>
             <h2>{title}</h2>

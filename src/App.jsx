@@ -5,6 +5,7 @@ import AppShell from './components/AppShell.jsx'
 import PrivacyLockScreen from './components/PrivacyLockScreen.jsx'
 import Welcome from './pages/Welcome.jsx'
 import Auth from './pages/Auth.jsx'
+import Onboarding from './pages/Onboarding.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import { CycleCalendarPage, HealthPage, MenstruationPage, MyCyclePage } from './pages/CyclePages.jsx'
 import { DevicesPage, HormonesPage, ReportsPage, SymptomsPage } from './pages/HealthPages.jsx'
@@ -36,10 +37,18 @@ function RootRedirect() {
 }
 
 function ProtectedLayout() {
-  const { authenticated } = useApp()
+  const { authenticated, data } = useApp()
   const location = useLocation()
   if (!authenticated) return <Navigate to="/welcome" state={{ from: location }} replace />
+  if (data?.settings?.onboardingComplete === false) return <Navigate to="/onboarding" replace />
   return <AppShell />
+}
+
+function OnboardingOnly({ children }) {
+  const { authenticated, data } = useApp()
+  if (!authenticated) return <Navigate to="/welcome" replace />
+  if (data?.settings?.onboardingComplete !== false) return <Navigate to="/app" replace />
+  return children
 }
 
 function PublicOnly({ children }) {
@@ -56,6 +65,7 @@ export default function App() {
         <Route path="/" element={<RootRedirect />} />
         <Route path="/welcome" element={<PublicOnly><Welcome /></PublicOnly>} />
         <Route path="/auth" element={<PublicOnly><Auth /></PublicOnly>} />
+        <Route path="/onboarding" element={<OnboardingOnly><Onboarding /></OnboardingOnly>} />
         <Route path="/app" element={<ProtectedLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="cycle-calendar" element={<CycleCalendarPage />} />

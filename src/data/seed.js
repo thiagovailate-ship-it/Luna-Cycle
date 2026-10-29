@@ -169,7 +169,9 @@ export function createDefaultData(name = 'Luciene Oliveira', email = 'luciene@em
       phase: 'cycle',
       cycleLength: 28,
       periodLength: 5,
-      notifications: { reminders: true, symptoms: true, tips: true, email: false, sound: false },
+      cycleRegularity: 'regular',
+      onboardingComplete: true,
+      notifications: { reminders: true, symptoms: true, tips: true, email: false, sound: false, browser: false },
       privacy: {
         biometricLock: false,
         usageData: true,
@@ -182,6 +184,7 @@ export function createDefaultData(name = 'Luciene Oliveira', email = 'luciene@em
       accessibility: { highContrast: false, reducedMotion: false, textScale: 1 },
       language: 'pt-BR',
       deviceConnected: true,
+      lastBackupAt: null,
     },
     cycle: {
       entries: [
@@ -244,6 +247,59 @@ export function createDefaultData(name = 'Luciene Oliveira', email = 'luciene@em
     pregnancy: { startDate: null, dueDate: null, babyName: '', favorite: false },
     menopause: { stage: 'Ciclo menstrual', startAge: null, focus: ['Ciclo', 'Humor', 'Sintomas'] },
     favorites: ['cycle-nutrition', 'sleep'],
+    createdAt: new Date().toISOString(),
+  }
+}
+
+export function createEmptyData(name = 'Você', email = '') {
+  return {
+    version: 1,
+    profile: {
+      name,
+      email,
+      phone: '',
+      birthDate: '',
+      city: '',
+      avatar: '',
+      emergencyContact: '',
+      bio: '',
+    },
+    settings: {
+      phase: 'cycle',
+      cycleLength: 28,
+      periodLength: 5,
+      cycleRegularity: 'regular',
+      onboardingComplete: false,
+      notifications: { reminders: true, symptoms: true, tips: true, email: false, sound: false, browser: false },
+      privacy: {
+        biometricLock: false,
+        usageData: false,
+        shareWithProfessional: false,
+        discreet: false,
+        quickLock: true,
+        autoLock: false,
+        pin: '',
+      },
+      accessibility: { highContrast: false, reducedMotion: false, textScale: 1 },
+      language: 'pt-BR',
+      deviceConnected: false,
+      lastBackupAt: null,
+    },
+    cycle: { entries: [] },
+    periodDays: [],
+    symptoms: [],
+    moods: [],
+    water: [],
+    vitals: [],
+    reminders: [],
+    exams: [],
+    appointments: [],
+    diary: [],
+    notifications: [],
+    devices: { connected: false, battery: 0, name: '', lastSync: null },
+    pregnancy: { startDate: null, dueDate: null, babyName: '', favorite: false },
+    menopause: { stage: 'Ciclo menstrual', startAge: null, focus: ['Ciclo', 'Humor', 'Sintomas'] },
+    favorites: [],
     createdAt: new Date().toISOString(),
   }
 }

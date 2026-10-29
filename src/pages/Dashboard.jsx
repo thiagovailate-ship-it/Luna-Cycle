@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useApp } from '../context/AppContext.jsx'
 import { ACTIVE_PHASE } from '../data/seed.js'
 import { formatDate, MOODS, relativeLabel, todayISO } from '../lib/date.js'
-import { getActivePeriod, getCycleInfo } from '../lib/cycle.js'
+import { getActivePeriod, getCurrentPhaseKey, getCycleInfo, getPhaseDefinitions } from '../lib/cycle.js'
 import { useQuickLog } from '../hooks/useQuickLog.js'
 import { DecorativeLeaf } from '../components/Art.jsx'
 import { AppIcon } from '../components/AppIcon.jsx'
@@ -123,20 +123,23 @@ function PeriodQuickCard({ data }) {
   )
 }
 
+const PHASE_ICONS = {
+  menstruation: 'drop',
+  follicular: 'leaf',
+  ovulation: 'sparkles',
+  luteal: 'moon',
+}
+
 function CyclePhaseTimeline({ info }) {
-  const phases = [
-    { key: 'menstruation', label: 'Menstruação', range: `Dias 1–${info.periodLength || 5}`, icon: 'drop' },
-    { key: 'folicular', label: 'Folicular', range: `Até o dia ${info.fertileStart - 1}`, icon: 'leaf' },
-    { key: 'ovulation', label: 'Ovulação', range: `Dia ${info.ovulationDay}`, icon: 'sparkles' },
-    { key: 'luteal', label: 'Lútea', range: `Dias ${info.fertileEnd + 1}–${info.length}`, icon: 'moon' },
-  ]
-  const current = info.day <= (info.periodLength || 5)
-    ? 'menstruation'
-    : info.day < info.fertileStart
-      ? 'folicular'
-      : info.day <= info.fertileEnd
-        ? 'ovulation'
-        : 'luteal'
+  const phases = getPhaseDefinitions(info).map((phase) => {
+    const short = phase.label.replace('Fase ', '')
+    return {
+      ...phase,
+      display: short.charAt(0).toUpperCase() + short.slice(1),
+      icon: PHASE_ICONS[phase.key],
+    }
+  })
+  const current = getCurrentPhaseKey(info)
 
   return (
     <Card className="phase-timeline-card">
@@ -145,13 +148,40 @@ function CyclePhaseTimeline({ info }) {
         {phases.map((phase) => (
           <div className={`phase-timeline-item ${current === phase.key ? 'active' : ''}`} key={phase.key}>
             <span className="phase-timeline-icon"><AppIcon name={phase.icon} size={21} /></span>
-            <strong>{phase.label}</strong>
+            <strong>{phase.display}</strong>
             <small>{phase.range}</small>
           </div>
         ))}
       </div>
     </Card>
   )
+}
+
+function countDays(value) {
+  return `${value} ${value === 1 ? 'dia' : 'dias'}`
+}
+
+function nextPeriodLabel(info) {
+  if (!info.day) return 'Sem registro'
+  if (info.isLate) return `Atrasada há ${countDays(info.daysLate)}`
+  if (info.daysToNext === 0) return 'Prevista hoje'
+  return countDays(info.daysToNext)
+}
+
+function periodHint(info) {
+  if (!info.day) return 'Registre sua menstruação'
+  if (info.isLate) return `Previsão era ${formatDate(info.nextPeriod, 'dd/MM')}`
+  if (info.stats.rangeDays > 0) {
+    return `Previsão ${formatDate(info.nextPeriod, 'dd/MM')} · ±${info.stats.rangeDays} dias`
+  }
+  return `Previsão ${formatDate(info.nextPeriod, 'dd/MM')}`
+}
+
+function ovulationLabel(info) {
+  if (!info.day) return '—'
+  if (info.daysToOvulation === 0) return 'Hoje'
+  if (info.daysToOvulation > 0) return `Em ${countDays(info.daysToOvulation)}`
+  return 'Já passou'
 }
 
 function CycleDashboard({ data, name, discreet }) {
@@ -167,7 +197,7 @@ function CycleDashboard({ data, name, discreet }) {
           <CycleOrbitArt className="hero-orbit-art" size={310} />
           <div className="hero-copy">
             <div className="eyebrow">Seu ciclo hoje</div>
-            <h2>{discreet ? 'Seu acompanhamento de hoje.' : `Você está na ${info.phaseName.toLowerCase()}.`}</h2>
+            <h2>{discreet ? 'Seu acompanhamento de hoje.' : info.day ? `Você está na ${info.phaseName.toLowerCase()}.` : 'Vamos começar pelo seu primeiro registro.'}</h2>
             <p>Seu corpo muda todos os dias. Acompanhe cada sinal com leveza e descubra os padrões que fazem sentido para você.</p>
             <div className="hero-actions">
               <Link to="/app/menstruation" className="button button-primary"><AppIcon name="drop" size={17} /> Registrar menstruação</Link>
@@ -175,9 +205,14 @@ function CycleDashboard({ data, name, discreet }) {
             </div>
           </div>
           <div className="cycle-ring-layout">
-            <ProgressRing progress={info.progress} value={info.day} label={`de ${info.length} dias`} sublabel="Dia do ciclo" />
+            <ProgressRing
+              progress={info.progress}
+              value={info.day || '—'}
+              label={info.day ? (info.isLate ? `previsão era dia ${info.length}` : `de ${info.length} dias`) : 'sem registro'}
+              sublabel="Dia do ciclo"
+            />
             <div className="cycle-side-stats">
-              <div className="cycle-side-stat"><span>Próxima menstruação</span><strong>{info.daysToNext} dias</strong></div>
+              <div className="cycle-side-stat"><span>Próxima menstruação</span><strong>{nextPeriodLabel(info)}</strong></div>
               <div className="cycle-side-stat"><span>Ovulação estimada</span><strong>Dia {info.ovulationDay}</strong></div>
               <div className="cycle-side-stat"><span>Fase fértil</span><strong>{info.fertileStart}–{info.fertileEnd}</strong></div>
             </div>
@@ -185,9 +220,9 @@ function CycleDashboard({ data, name, discreet }) {
         </Card>
 
         <div className="grid grid-3">
-          <StatCard icon="Droplet" label="Menstruação" value={`${info.daysToNext} dias`} hint={`Previsão ${nextPeriodDate}`} />
-          <StatCard icon="Sparkles" label="Ovulação" value={info.daysToOvulation ? `Em ${info.daysToOvulation} dias` : 'Hoje'} hint={`Dia ${info.ovulationDay} do ciclo`} tone="purple" />
-          <StatCard icon="HeartPulse" label="Fase atual" value={info.phaseName} hint="Acompanhe seus sinais" tone="green" />
+          <StatCard icon="Droplet" label="Menstruação" value={nextPeriodLabel(info)} hint={periodHint(info)} />
+          <StatCard icon="Sparkles" label="Ovulação" value={ovulationLabel(info)} hint={`Dia ${info.ovulationDay} do ciclo`} tone="purple" />
+          <StatCard icon="HeartPulse" label="Fase atual" value={info.phaseName} hint={info.isLate ? 'Previsão ultrapassada' : info.day ? `Dia ${info.day} do ciclo` : 'Sem registro'} tone="green" />
         </div>
 
         <CyclePhaseTimeline info={{ ...info, periodLength: data.settings.periodLength }} />
@@ -195,9 +230,9 @@ function CycleDashboard({ data, name, discreet }) {
         <Card>
           <SectionTitle title="Seu bem-estar" subtitle="Últimos sinais registrados" action={<Link to="/app/health" className="text-button">Ver saúde</Link>} />
           <div className="wellness-mini-grid">
-            <div className="wellness-mini"><AppIcon name="thermometer" size={21} /><span>Temperatura da pele</span><strong>{latest.temperature || '36,4'} °C</strong></div>
-            <div className="wellness-mini"><AppIcon name="health" size={21} /><span>Frequência cardíaca</span><strong>{latest.heartRate || 72} bpm</strong></div>
-            <div className="wellness-mini"><AppIcon name="moon" size={21} /><span>Sono</span><strong>{String(latest.sleep || 7.3).replace('.', ',')} h</strong></div>
+            <div className="wellness-mini"><AppIcon name="thermometer" size={21} /><span>Temperatura da pele</span><strong>{latest.temperature ? `${String(latest.temperature).replace('.', ',')} °C` : '—'}</strong></div>
+            <div className="wellness-mini"><AppIcon name="health" size={21} /><span>Frequência cardíaca</span><strong>{latest.heartRate ? `${latest.heartRate} bpm` : '—'}</strong></div>
+            <div className="wellness-mini"><AppIcon name="moon" size={21} /><span>Sono</span><strong>{latest.sleep ? `${String(latest.sleep).replace('.', ',')} h` : '—'}</strong></div>
           </div>
         </Card>
 
@@ -211,8 +246,8 @@ function CycleDashboard({ data, name, discreet }) {
         <Card className="card-blush">
           <SectionTitle title="Resumo de hoje" />
           <div className="stack-tight">
-            <ListRow icon="Activity" title={`Dia ${info.day} do ciclo`} description="Acompanhe sintomas e humor" meta="Hoje" />
-            <ListRow icon="CalendarDays" title="Próxima menstruação" description={`Previsão ${nextPeriodDate}`} meta={`${info.daysToNext} dias`} tone="rose" />
+            <ListRow icon="Activity" title={info.day ? `Dia ${info.day} do ciclo` : 'Ciclo sem registro'} description="Acompanhe sintomas e humor" meta="Hoje" />
+            <ListRow icon="CalendarDays" title="Próxima menstruação" description={`Previsão ${nextPeriodDate}`} meta={nextPeriodLabel(info)} tone="rose" />
             <ListRow icon="BellRing" title="Lembretes ativos" description={`${activeReminders} cuidados programados`} meta="Ver" tone="green" onClick={undefined} />
           </div>
         </Card>
