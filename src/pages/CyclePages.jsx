@@ -5,14 +5,14 @@ import { useApp } from '../context/AppContext.jsx'
 import { useQuickLog } from '../hooks/useQuickLog.js'
 import { addDaysISO, daysBetween, formatDate, relativeLabel, todayISO, uid } from '../lib/date.js'
 import {
-  getActivePeriod, getCurrentPhaseKey, getCycleInfo, getCycleIntervalPoints,
-  getDayMeta, getPhaseDefinitions, getPredictedPeriodStarts,
+  CYCLE_LENGTH_LIMITS, PERIOD_LENGTH_LIMITS, getActivePeriod, getCurrentPhaseKey, getCycleInfo,
+  getCycleIntervalPoints, getDayMeta, getPhaseDefinitions, getPredictedPeriodStarts, parseCycleSettings,
 } from '../lib/cycle.js'
 import CalendarView from '../components/CalendarView.jsx'
 import { AppIcon } from '../components/AppIcon.jsx'
 import { PeriodFlowArt } from '../components/CycleArt.jsx'
 import {
-  Badge, BarChart, Card, EmptyState, Field, Icon, IconCircle, LineChart, ListRow, Modal,
+  Badge, BarChart, Card, DurationInput, EmptyState, Field, Icon, IconCircle, LineChart, ListRow, Modal,
   PageHeader, SectionTitle, StatCard, Tabs,
 } from '../components/ui.jsx'
 
@@ -369,6 +369,7 @@ export function MyCyclePage() {
   const navigate = useNavigate()
   const [tab, setTab] = useState('summary')
   const [settings, setSettings] = useState({ cycleLength: String(data.settings.cycleLength), periodLength: String(data.settings.periodLength) })
+  const [settingsError, setSettingsError] = useState(null)
   const history = [...data.cycle.entries].sort((a, b) => b.startDate.localeCompare(a.startDate))
   const info = getCycleInfo(data)
   const intervalPoints = useMemo(() => getCycleIntervalPoints(data), [data])
@@ -378,9 +379,20 @@ export function MyCyclePage() {
   )
   const confidenceTone = info.confidence === 'alta' ? 'green' : info.confidence === 'média' ? 'yellow' : 'neutral'
 
+  const updateSetting = (key, value) => {
+    setSettings((current) => ({ ...current, [key]: value }))
+    setSettingsError(null)
+  }
+
   const saveSettings = (event) => {
     event.preventDefault()
-    updateData((current) => ({ settings: { ...current.settings, cycleLength: Number(settings.cycleLength), periodLength: Number(settings.periodLength) } }))
+    const parsed = parseCycleSettings(settings)
+    if (!parsed.ok) {
+      setSettingsError(parsed)
+      return
+    }
+    setSettings({ cycleLength: String(parsed.cycleLength), periodLength: String(parsed.periodLength) })
+    updateData((current) => ({ settings: { ...current.settings, cycleLength: parsed.cycleLength, periodLength: parsed.periodLength } }))
     showToast('Preferências do ciclo atualizadas.')
   }
 
@@ -418,9 +430,14 @@ export function MyCyclePage() {
               <SectionTitle title="Ajustar meu ciclo" subtitle="Personalize as previsões" />
               <form className="stack-tight" onSubmit={saveSettings}>
                 <div className="form-grid">
-                  <Field label="Duração de referência" hint="Usada quando ainda não há histórico suficiente."><select value={settings.cycleLength} onChange={(event) => setSettings({ ...settings, cycleLength: event.target.value })}>{Array.from({ length: 18 }).map((_, index) => index + 21).map((value) => <option key={value} value={value}>{value} dias</option>)}</select></Field>
-                  <Field label="Duração da menstruação"><select value={settings.periodLength} onChange={(event) => setSettings({ ...settings, periodLength: event.target.value })}>{[2, 3, 4, 5, 6, 7, 8].map((value) => <option key={value} value={value}>{value} dias</option>)}</select></Field>
+                  <Field label="Duração de referência" hint={`Entre ${CYCLE_LENGTH_LIMITS.min} e ${CYCLE_LENGTH_LIMITS.max} dias. Usada quando ainda não há histórico suficiente.`}>
+                    <DurationInput value={settings.cycleLength} max={CYCLE_LENGTH_LIMITS.max} invalid={settingsError?.field === 'cycleLength'} onChange={(value) => updateSetting('cycleLength', value)} />
+                  </Field>
+                  <Field label="Duração da menstruação" hint={`Entre ${PERIOD_LENGTH_LIMITS.min} e ${PERIOD_LENGTH_LIMITS.max} dias.`}>
+                    <DurationInput value={settings.periodLength} max={PERIOD_LENGTH_LIMITS.max} invalid={settingsError?.field === 'periodLength'} onChange={(value) => updateSetting('periodLength', value)} />
+                  </Field>
                 </div>
+                {settingsError && <div className="error-message" role="alert">{settingsError.error}</div>}
                 <button className="button button-primary" type="submit">Salvar preferências</button>
               </form>
             </Card>

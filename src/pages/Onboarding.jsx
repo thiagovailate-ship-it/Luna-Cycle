@@ -3,11 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext.jsx'
 import { AppIcon } from '../components/AppIcon.jsx'
 import { CycleHeroArt } from '../components/CycleArt.jsx'
-import { Field, Logo } from '../components/ui.jsx'
+import { DurationInput, Field, Logo } from '../components/ui.jsx'
 import { addDaysISO, todayISO, uid } from '../lib/date.js'
-
-const CYCLE_LENGTHS = Array.from({ length: 20 }).map((_, index) => index + 21)
-const PERIOD_LENGTHS = [2, 3, 4, 5, 6, 7, 8]
+import { CYCLE_LENGTH_LIMITS, PERIOD_LENGTH_LIMITS, parseCycleSettings } from '../lib/cycle.js'
 
 export default function Onboarding() {
   const { currentUser, updateData, showToast, logout } = useApp()
@@ -20,7 +18,10 @@ export default function Onboarding() {
   })
   const [error, setError] = useState('')
 
-  const patch = (key, value) => setForm((current) => ({ ...current, [key]: value }))
+  const patch = (key, value) => {
+    setForm((current) => ({ ...current, [key]: value }))
+    setError('')
+  }
 
   const finish = () => {
     updateData((current) => ({
@@ -40,13 +41,17 @@ export default function Onboarding() {
       setError('A data não pode estar no futuro.')
       return
     }
-    const duration = Number(form.periodLength)
+    const durations = parseCycleSettings(form)
+    if (!durations.ok) {
+      setError(durations.error)
+      return
+    }
     const startDate = form.lastPeriod
     updateData((current) => {
       const entry = {
         id: uid('cycle'),
         startDate,
-        duration,
+        duration: durations.periodLength,
         flow: 'Moderado',
         notes: 'Primeiro registro',
       }
@@ -58,8 +63,8 @@ export default function Onboarding() {
         cycle: { ...current.cycle, entries },
         settings: {
           ...current.settings,
-          cycleLength: Number(form.cycleLength),
-          periodLength: duration,
+          cycleLength: durations.cycleLength,
+          periodLength: durations.periodLength,
           cycleRegularity: form.regularity,
           onboardingComplete: true,
         },
@@ -108,15 +113,11 @@ export default function Onboarding() {
               <input type="date" max={todayISO()} value={form.lastPeriod} onChange={(event) => patch('lastPeriod', event.target.value)} />
             </Field>
             <div className="form-grid">
-              <Field label="Duração de referência do ciclo" hint="Quantos dias costuma passar entre menstruações?">
-                <select value={form.cycleLength} onChange={(event) => patch('cycleLength', event.target.value)}>
-                  {CYCLE_LENGTHS.map((value) => <option key={value} value={value}>{value} dias</option>)}
-                </select>
+              <Field label="Duração de referência do ciclo" hint={`Entre ${CYCLE_LENGTH_LIMITS.min} e ${CYCLE_LENGTH_LIMITS.max} dias entre menstruações.`}>
+                <DurationInput value={form.cycleLength} max={CYCLE_LENGTH_LIMITS.max} onChange={(value) => patch('cycleLength', value)} />
               </Field>
-              <Field label="Dias de menstruação">
-                <select value={form.periodLength} onChange={(event) => patch('periodLength', event.target.value)}>
-                  {PERIOD_LENGTHS.map((value) => <option key={value} value={value}>{value} dias</option>)}
-                </select>
+              <Field label="Dias de menstruação" hint={`Entre ${PERIOD_LENGTH_LIMITS.min} e ${PERIOD_LENGTH_LIMITS.max} dias.`}>
+                <DurationInput value={form.periodLength} max={PERIOD_LENGTH_LIMITS.max} onChange={(value) => patch('periodLength', value)} />
               </Field>
             </div>
 

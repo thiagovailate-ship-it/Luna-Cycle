@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { addDaysISO, todayISO } from '../src/lib/date.js'
 import {
   getCycleStats, getCycleInfo, getCycleDay, getDayMeta, getPhaseDefinitions,
-  getCurrentPhaseKey, getPredictedPeriodStarts, getCycleIntervalPoints, median,
+  getCurrentPhaseKey, getPredictedPeriodStarts, getCycleIntervalPoints, median, parseCycleSettings,
 } from '../src/lib/cycle.js'
 
 function makeData(entries, overrides = {}) {
@@ -25,6 +25,23 @@ test('median handles odd and even samples', () => {
   assert.equal(median([28, 30, 29]), 29)
   assert.equal(median([27, 29, 30, 32]), 29.5)
   assert.equal(median([]), 0)
+})
+
+test('cycle settings accept typed durations within range', () => {
+  assert.deepEqual(parseCycleSettings({ cycleLength: '31', periodLength: '6' }), {
+    ok: true, cycleLength: 31, periodLength: 6,
+  })
+  assert.equal(parseCycleSettings({ cycleLength: '90', periodLength: '14' }).ok, true)
+})
+
+test('cycle settings reject missing, out-of-range and inconsistent durations', () => {
+  assert.deepEqual(parseCycleSettings({ cycleLength: '', periodLength: '5' }), {
+    ok: false, field: 'cycleLength', error: 'Informe a duração do ciclo entre 15 e 90 dias.',
+  })
+  assert.equal(parseCycleSettings({ cycleLength: '91', periodLength: '5' }).field, 'cycleLength')
+  assert.equal(parseCycleSettings({ cycleLength: '28', periodLength: '0' }).field, 'periodLength')
+  assert.equal(parseCycleSettings({ cycleLength: '28', periodLength: '15' }).field, 'periodLength')
+  assert.equal(parseCycleSettings({ cycleLength: '28.5', periodLength: '5' }).ok, false)
 })
 
 test('cycle stats use the median of recent intervals', () => {

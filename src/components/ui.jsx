@@ -125,6 +125,26 @@ export function Field({ label, hint, children, required, className = '' }) {
   )
 }
 
+export function DurationInput({ value, onChange, max = 99, invalid = false }) {
+  const maxLength = String(max).length
+  return (
+    <span className={`duration-input ${invalid ? 'is-invalid' : ''}`}>
+      <input
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        autoComplete="off"
+        maxLength={maxLength}
+        value={value}
+        aria-invalid={invalid || undefined}
+        onChange={(event) => onChange(event.target.value.replace(/\D/g, '').slice(0, maxLength))}
+        onFocus={(event) => event.target.select()}
+      />
+      <span className="duration-input-suffix" aria-hidden="true">dias</span>
+    </span>
+  )
+}
+
 export function Toggle({ checked, onChange, label, description, disabled = false }) {
   return (
     <label className={`toggle-row ${disabled ? 'is-disabled' : ''}`}>

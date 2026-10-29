@@ -6,6 +6,29 @@ const FERTILE_DAYS_BEFORE_OVULATION = 4
 const DEFAULT_PERIOD_LENGTH = 5
 const HISTORY_SAMPLE = 6
 
+export const CYCLE_LENGTH_LIMITS = Object.freeze({ min: 15, max: 90 })
+export const PERIOD_LENGTH_LIMITS = Object.freeze({ min: 1, max: 14 })
+
+export function parseCycleSettings(values = {}) {
+  const cycleLength = Number(values.cycleLength)
+  const periodLength = Number(values.periodLength)
+  if (!Number.isInteger(cycleLength) || cycleLength < CYCLE_LENGTH_LIMITS.min || cycleLength > CYCLE_LENGTH_LIMITS.max) {
+    return {
+      ok: false,
+      field: 'cycleLength',
+      error: `Informe a duração do ciclo entre ${CYCLE_LENGTH_LIMITS.min} e ${CYCLE_LENGTH_LIMITS.max} dias.`,
+    }
+  }
+  if (!Number.isInteger(periodLength) || periodLength < PERIOD_LENGTH_LIMITS.min || periodLength > PERIOD_LENGTH_LIMITS.max) {
+    return {
+      ok: false,
+      field: 'periodLength',
+      error: `Informe a duração da menstruação entre ${PERIOD_LENGTH_LIMITS.min} e ${PERIOD_LENGTH_LIMITS.max} dias.`,
+    }
+  }
+  return { ok: true, cycleLength, periodLength }
+}
+
 export function sortedCycleEntries(data) {
   return [...(data.cycle?.entries || [])].sort((a, b) => b.startDate.localeCompare(a.startDate))
 }

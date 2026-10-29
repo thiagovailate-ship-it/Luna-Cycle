@@ -6,7 +6,8 @@ import { Accessibility, BellRing, Check, CircleHelp, CloudDownload, Contrast, Do
 import { useApp } from '../context/AppContext.jsx'
 import { addDaysISO, daysBetween, formatDate, relativeLabel, todayISO, uid } from '../lib/date.js'
 import { BACKUP_MIN_PASSPHRASE, decryptBackup, encryptBackup, isEncryptedBackup } from '../lib/backup.js'
-import { Avatar, Badge, Card, EmptyState, Field, Icon, IconCircle, ListRow, Modal, PageHeader, SectionTitle, Tabs, Toggle } from '../components/ui.jsx'
+import { CYCLE_LENGTH_LIMITS, PERIOD_LENGTH_LIMITS, parseCycleSettings } from '../lib/cycle.js'
+import { Avatar, Badge, Card, DurationInput, EmptyState, Field, Icon, IconCircle, ListRow, Modal, PageHeader, SectionTitle, Tabs, Toggle } from '../components/ui.jsx'
 import { BrowserAlertsToggle } from '../components/Pwa.jsx'
 
 const emptyReminder = { title: '', description: '', date: addDaysISO(todayISO(), 1), time: '09:00', category: 'Ciclo' }
@@ -217,6 +218,7 @@ export function SettingsPage() {
   const location = useLocation()
   const [tab, setTab] = useState(location.state?.tab || 'notifications')
   const [cycleForm, setCycleForm] = useState({ cycleLength: String(data.settings.cycleLength), periodLength: String(data.settings.periodLength) })
+  const [cycleError, setCycleError] = useState(null)
   const [exportOpen, setExportOpen] = useState(false)
   const [exportForm, setExportForm] = useState({ password: '', confirm: '' })
   const [importPayload, setImportPayload] = useState(null)
@@ -230,9 +232,19 @@ export function SettingsPage() {
 
   const updateNotification = (key, value) => updateData((current) => ({ settings: { ...current.settings, notifications: { ...current.settings.notifications, [key]: value } } }))
   const markBackup = () => updateData((current) => ({ settings: { ...current.settings, lastBackupAt: todayISO() } }))
+  const updateCycleForm = (key, value) => {
+    setCycleForm((current) => ({ ...current, [key]: value }))
+    setCycleError(null)
+  }
   const saveCycle = (event) => {
     event.preventDefault()
-    updateData((current) => ({ settings: { ...current.settings, cycleLength: Number(cycleForm.cycleLength), periodLength: Number(cycleForm.periodLength) } }))
+    const parsed = parseCycleSettings(cycleForm)
+    if (!parsed.ok) {
+      setCycleError(parsed)
+      return
+    }
+    setCycleForm({ cycleLength: String(parsed.cycleLength), periodLength: String(parsed.periodLength) })
+    updateData((current) => ({ settings: { ...current.settings, cycleLength: parsed.cycleLength, periodLength: parsed.periodLength } }))
     showToast('Configurações do ciclo salvas.')
   }
   const exportPlain = () => {
@@ -395,7 +407,7 @@ export function SettingsPage() {
         </div>
       )}
 
-      {tab === 'cycle' && <Card><SectionTitle title="Preferências do ciclo" subtitle="Usadas para calcular previsões" /><form className="form-grid" onSubmit={saveCycle}><Field label="Duração de referência" hint="Usada enquanto não houver histórico suficiente."><select value={cycleForm.cycleLength} onChange={(event) => setCycleForm({ ...cycleForm, cycleLength: event.target.value })}>{Array.from({ length: 20 }).map((_, index) => index + 20).map((value) => <option key={value} value={value}>{value} dias</option>)}</select></Field><Field label="Duração da menstruação"><select value={cycleForm.periodLength} onChange={(event) => setCycleForm({ ...cycleForm, periodLength: event.target.value })}>{[2, 3, 4, 5, 6, 7, 8].map((value) => <option key={value} value={value}>{value} dias</option>)}</select></Field><div className="form-grid-full"><button className="button button-primary" type="submit">Salvar preferências</button></div></form></Card>}
+      {tab === 'cycle' && <Card><SectionTitle title="Preferências do ciclo" subtitle="Usadas para calcular previsões" /><form className="form-grid" onSubmit={saveCycle}><Field label="Duração de referência" hint={`Entre ${CYCLE_LENGTH_LIMITS.min} e ${CYCLE_LENGTH_LIMITS.max} dias. Usada enquanto não houver histórico suficiente.`}><DurationInput value={cycleForm.cycleLength} max={CYCLE_LENGTH_LIMITS.max} invalid={cycleError?.field === 'cycleLength'} onChange={(value) => updateCycleForm('cycleLength', value)} /></Field><Field label="Duração da menstruação" hint={`Entre ${PERIOD_LENGTH_LIMITS.min} e ${PERIOD_LENGTH_LIMITS.max} dias.`}><DurationInput value={cycleForm.periodLength} max={PERIOD_LENGTH_LIMITS.max} invalid={cycleError?.field === 'periodLength'} onChange={(value) => updateCycleForm('periodLength', value)} /></Field>{cycleError && <div className="error-message form-grid-full" role="alert">{cycleError.error}</div>}<div className="form-grid-full"><button className="button button-primary" type="submit">Salvar preferências</button></div></form></Card>}
       {tab === 'data' && (
         <div className="split-even">
           <Card>
