@@ -283,6 +283,80 @@ export function MenstruationPage() {
   )
 }
 
+function dayRange(start, end) {
+  return start === end ? `Dia ${start}` : `Dias ${start}–${end}`
+}
+
+function CyclePhasesGuide({ info, periodLength }) {
+  const phases = [
+    {
+      key: 'menstruation',
+      label: 'Menstruação',
+      range: dayRange(1, periodLength),
+      icon: 'drop',
+      tone: 'rose',
+      description: 'O endométrio se desprende e o ciclo recomeça. Cólicas, cansaço e fluxo variável são comuns — vale pegar mais leve.',
+    },
+    {
+      key: 'follicular',
+      label: 'Fase folicular',
+      range: dayRange(periodLength + 1, info.ovulationDay - 1),
+      icon: 'leaf',
+      tone: 'green',
+      description: 'Os folículos amadurecem e o estrogênio aumenta. A energia costuma subir e o corpo se prepara para ovular.',
+    },
+    {
+      key: 'ovulation',
+      label: 'Ovulação',
+      range: `Dia ${info.ovulationDay}`,
+      icon: 'sparkles',
+      tone: 'purple',
+      description: 'Um óvulo é liberado e fica viável por cerca de 24 horas. É o pico da fase fértil — uma estimativa do seu ciclo.',
+    },
+    {
+      key: 'luteal',
+      label: 'Fase lútea',
+      range: dayRange(info.ovulationDay + 1, info.length),
+      icon: 'moon',
+      tone: 'peach',
+      description: 'A progesterona predomina e o corpo se prepara para uma nova menstruação. Inchaço, seios sensíveis e humor variável podem aparecer.',
+    },
+  ]
+  const current = info.day <= periodLength
+    ? 'menstruation'
+    : info.day === info.ovulationDay
+      ? 'ovulation'
+      : info.day < info.ovulationDay
+        ? 'follicular'
+        : 'luteal'
+
+  return (
+    <Card className="cycle-phases-card">
+      <SectionTitle
+        title="Entenda as fases do seu ciclo"
+        subtitle="O que acontece no corpo em cada etapa"
+        action={<Badge tone="neutral">Dia {info.day} de {info.length}</Badge>}
+      />
+      <div className="cycle-phase-list">
+        {phases.map((phase) => (
+          <div className={`cycle-phase-row ${current === phase.key ? 'is-current' : ''}`} key={phase.key}>
+            <IconCircle icon={phase.icon} tone={phase.tone} />
+            <div className="cycle-phase-copy">
+              <div className="cycle-phase-head">
+                <strong>{phase.label}</strong>
+                <span className="cycle-phase-range">{phase.range}</span>
+                {current === phase.key && <Badge tone="rose">Você está aqui</Badge>}
+              </div>
+              <p>{phase.description}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="cycle-phase-note"><AppIcon name="info" size={14} /> As fases usam a sua duração média de {info.length} dias e podem variar a cada ciclo. As previsões não substituem um método contraceptivo.</p>
+    </Card>
+  )
+}
+
 export function MyCyclePage() {
   const { data, updateData, showToast } = useApp()
   const navigate = useNavigate()
@@ -310,6 +384,7 @@ export function MyCyclePage() {
             <StatCard icon="Heart" label="Fase fértil" value={`${info.fertileStart} ao ${info.fertileEnd}`} hint="Dias do ciclo" tone="green" />
             <StatCard icon="Sparkles" label="Ovulação estimada" value={`Dia ${info.ovulationDay}`} hint="Previsão" tone="purple" />
           </div>
+          <CyclePhasesGuide info={info} periodLength={data.settings.periodLength || 5} />
           <div className="split-even">
             <Card>
               <SectionTitle title="Seu ciclo em números" subtitle="Baseado nos seus registros" />

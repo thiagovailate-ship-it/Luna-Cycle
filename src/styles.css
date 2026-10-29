@@ -1452,6 +1452,33 @@ input:focus, select:focus, textarea:focus {
 .phase-timeline-item strong { display: block; font-size: 11px; }
 .phase-timeline-item small { color: var(--muted); font-size: 9.5px; }
 
+.cycle-phases-card { background: linear-gradient(145deg, #fff, #fff8f8); }
+.cycle-phase-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.cycle-phase-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 17px;
+  background: rgba(255,255,255,.72);
+  transition: .18s ease;
+}
+.cycle-phase-row.is-current {
+  border-color: rgba(199,117,138,.48);
+  background: linear-gradient(120deg, #fff, #fdeef1);
+  box-shadow: 0 8px 20px rgba(140,93,103,.09);
+}
+.cycle-phase-row .icon-circle { width: 38px; height: 38px; border-radius: 12px; }
+.cycle-phase-copy { flex: 1; min-width: 0; }
+.cycle-phase-head { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+.cycle-phase-head strong { font-size: 12.5px; }
+.cycle-phase-head .badge { margin-left: auto; }
+.cycle-phase-range { color: var(--rose-dark); font-size: 10px; font-weight: 700; letter-spacing: .02em; }
+.cycle-phase-copy p { margin: 3px 0 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.cycle-phase-note { display: flex; align-items: flex-start; gap: 6px; margin: 12px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.cycle-phase-note .app-icon { flex: 0 0 auto; margin-top: 1px; color: var(--rose); }
+
 .wellness-mini { border-radius: 18px; background: #fff8f8; }
 .wellness-mini .app-icon { color: var(--rose-dark); }
 .tip-card { border-radius: 20px; background: linear-gradient(120deg, #fff, #fff3e9); }
@@ -1590,6 +1617,7 @@ html[data-contrast="high"] .journey-card,
 html[data-contrast="high"] .public-art { background: #7f3c52; }
 html[data-contrast="high"] .card { border-width: 2px; }
 html[data-contrast="high"] .phase-timeline-item.active,
+html[data-contrast="high"] .cycle-phase-row.is-current,
 html[data-contrast="high"] .flow-option.active,
 html[data-contrast="high"] .symptom-option.active { box-shadow: none; border-width: 2px; }
 
@@ -1636,6 +1664,7 @@ html[data-contrast="high"] .symptom-option.active { box-shadow: none; border-wid
   .public-card { padding: 24px; }
   .welcome-features { gap: 7px; }
   .flow-day-grid { grid-template-columns: repeat(5, 118px); }
+  .cycle-phase-list { grid-template-columns: 1fr; }
   .period-quick-card, .period-start-hero, .period-status-hero { padding: 16px; }
   .period-quick-icon, .period-status-art { width: 56px; height: 56px; border-radius: 18px; }
 }
