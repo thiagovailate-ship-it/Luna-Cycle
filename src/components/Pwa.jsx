@@ -2,13 +2,15 @@ import { useState } from 'react'
 import { Download, Share, Smartphone } from 'lucide-react'
 import { useApp } from '../context/AppContext.jsx'
 import { usePwaInstall } from '../hooks/usePwaInstall.js'
+import { isNativeApp } from '../lib/native.js'
 import { Card, SectionTitle, Toggle } from './ui.jsx'
 
 export function InstallAppCard() {
   const { showToast } = useApp()
   const { canInstall, installed, isIos, install } = usePwaInstall()
 
-  if (installed) return null
+  // Já é um app instalado: não faz sentido oferecer instalação de PWA.
+  if (installed || isNativeApp) return null
 
   if (!canInstall && !isIos) {
     return (
@@ -48,6 +50,9 @@ export function BrowserAlertsToggle() {
   const supported = typeof window !== 'undefined' && 'Notification' in window
   const [permission, setPermission] = useState(supported ? Notification.permission : 'unsupported')
   const enabled = supported && data.settings.notifications.browser === true && permission === 'granted'
+
+  // A WebView nativa não expõe notificações do navegador de forma confiável.
+  if (isNativeApp) return null
 
   const change = async (value) => {
     if (!supported) {

@@ -5,6 +5,8 @@ import { useApp } from '../context/AppContext.jsx'
 import { SYMPTOM_OPTIONS } from '../data/seed.js'
 import { formatDate, MOODS, todayISO, uid } from '../lib/date.js'
 import { getHormoneSeries, getSymptomStats } from '../lib/cycle.js'
+import { exportTextFile } from '../lib/files.js'
+import { isNativeApp } from '../lib/native.js'
 import { BraceletArt } from '../components/Art.jsx'
 import { AppIcon } from '../components/AppIcon.jsx'
 import { Badge, BarChart, Card, Field, Icon, IconCircle, LineChart, ListRow, Modal, PageHeader, SectionTitle, StatCard, Tabs } from '../components/ui.jsx'
@@ -244,21 +246,24 @@ export function ReportsPage() {
     }))
   }, [data.symptoms])
 
-  const exportCsv = () => {
+  const exportCsv = async () => {
     const rows = [
       ['tipo', 'data', 'titulo', 'detalhes'],
       ...data.symptoms.map((item) => ['sintoma', item.date, item.label || item.type, `intensidade ${item.intensity}; humor ${item.mood}`]),
       ...data.cycle.entries.map((item) => ['ciclo', item.startDate, 'Menstruação', `${item.duration} dias; fluxo ${item.flow}`]),
     ]
     const csv = rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(';')).join('\n')
-    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `luna-cycle-relatorio-${todayISO()}.csv`
-    link.click()
-    URL.revokeObjectURL(url)
-    showToast('Relatório CSV exportado.')
+    try {
+      await exportTextFile({
+        filename: `luna-cycle-relatorio-${todayISO()}.csv`,
+        text: `\ufeff${csv}`,
+        mimeType: 'text/csv;charset=utf-8',
+        title: 'Relatório do Luna Cycle',
+      })
+      showToast('Relatório CSV exportado.')
+    } catch {
+      showToast('Não foi possível exportar o relatório agora.', 'error')
+    }
   }
 
   return (
@@ -268,7 +273,7 @@ export function ReportsPage() {
         <div className="print-title">Relatório do ciclo</div>
         <p>{data.profile.name || 'Uso pessoal'} · {formatDate(todayISO())}</p>
       </div>
-      <PageHeader eyebrow="Análises" title="Relatórios" description="Visualize tendências do seu ciclo, sintomas e bem-estar." back onBack={() => navigate(-1)} actions={<div className="row wrap"><button className="button button-secondary" onClick={exportCsv}><Download size={16} /> Exportar CSV</button><button className="button button-secondary" onClick={() => window.print()}><Printer size={16} /> Imprimir / PDF</button></div>} />
+      <PageHeader eyebrow="Análises" title="Relatórios" description="Visualize tendências do seu ciclo, sintomas e bem-estar." back onBack={() => navigate(-1)} actions={<div className="row wrap"><button className="button button-secondary" onClick={exportCsv}><Download size={16} /> Exportar CSV</button>{!isNativeApp && <button className="button button-secondary" onClick={() => window.print()}><Printer size={16} /> Imprimir / PDF</button>}</div>} />
       <Tabs items={[{ id: 'symptoms', label: 'Sintomas' }, { id: 'hormones', label: 'Hormônios' }, { id: 'weight', label: 'Peso' }]} active={tab} onChange={setTab} />
       <div style={{ height: 16 }} />
       {tab === 'symptoms' && (

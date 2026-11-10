@@ -103,6 +103,60 @@ Arquivos das jornadas antigas (`ExamPagesA.jsx`, `ExamPagesB.jsx`, `BabyPage`, `
 - Convite de instalação em **Mais**, com instruções específicas para Safari/iOS e fallback quando o navegador não oferece instalação automática.
 - Avisos do navegador para lembretes do dia, com deduplicação por lembrete. Eles funcionam **enquanto o app está aberto**; não há envio em segundo plano com o app fechado.
 
+## App Android (APK)
+
+Além do PWA, o projeto é empacotado como app Android nativo com **Capacitor 8**. O shell nativo usa o mesmo build do Vite e mantém os dados locais no WebView do aparelho.
+
+Pré-requisitos:
+
+- Node.js 22+
+- JDK 21+ (exigido pelo Capacitor 8)
+- Android SDK com `platforms;android-36` e `build-tools;36.0.0`
+- `ANDROID_HOME` apontando para o SDK (ou `android/local.properties` com `sdk.dir`)
+
+Se o seu `~/.gradle/gradle.properties` fixar `org.gradle.java.home` em um JDK antigo (comum em projetos legados), aponte o JDK 21 por variável de ambiente — os scripts `npm run android:*` repassam o valor ao Gradle:
+
+```bash
+export GRADLE_JAVA_HOME=/caminho/do/jdk-21
+```
+
+Comandos:
+
+```bash
+npm run android:sync      # build web + copia para o projeto Android
+npm run android:apk       # gera APK de debug instalável
+npm run android:release   # gera APK de release assinado
+npm run android:bundle    # gera AAB assinado para a Play Store
+npm run android:open      # abre o projeto no Android Studio
+```
+
+Saída dos APKs:
+
+```text
+android/app/build/outputs/apk/debug/app-debug.apk
+android/app/build/outputs/apk/release/app-release.apk
+android/app/build/outputs/bundle/release/app-release.aab
+```
+
+Para instalar no aparelho conectado por USB:
+
+```bash
+adb install -r android/app/build/outputs/apk/release/app-release.apk
+```
+
+A assinatura de release usa `android/keystore.properties` e `android/luna-release.jks`, ambos locais e fora do Git. Guarde esses arquivos: sem eles não é possível atualizar o app publicado com a mesma identidade. Para gerar uma nova chave, use o `keytool` e recrie o `keystore.properties` com `storeFile`, `storePassword`, `keyAlias` e `keyPassword`.
+
+Ajustes específicos do shell nativo:
+
+- Splash screen e ícones adaptativos gerados a partir de `assets/logo.png`.
+- ID do aplicativo `app.lunacycle`, versão `2.0.0` (`versionCode 20000`).
+- Backup automático do Android desativado (`allowBackup="false"`) para não enviar dados de saúde a serviços de nuvem do sistema.
+- Barra de status clara e área segura respeitada (notch, barra de gestos e teclado).
+- Botão físico de voltar fecha modais/menus e navega entre telas; na raiz minimiza o app.
+- CSV e backups são gravados no cache e abertos na folha de compartilhamento do Android (salvar, enviar, etc.).
+- O service worker do PWA não é registrado dentro do app nativo.
+- "Imprimir / PDF" fica oculto no APK, pois a WebView não implementa impressão.
+
 ## Persistência e privacidade
 
 Esta entrega usa **persistência local no navegador**, conforme a opção escolhida. Não há backend, sincronização entre dispositivos nem envio de dados para servidores. O banco local passa por migração automática ao carregar, sem apagar contas de versões anteriores.

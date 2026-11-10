@@ -9,17 +9,17 @@ import { BACKUP_MIN_PASSPHRASE, decryptBackup, encryptBackup, isEncryptedBackup 
 import { CYCLE_LENGTH_LIMITS, PERIOD_LENGTH_LIMITS, parseCycleSettings } from '../lib/cycle.js'
 import { Avatar, Badge, Card, DurationInput, EmptyState, Field, Icon, IconCircle, ListRow, Modal, PageHeader, SectionTitle, Tabs, Toggle } from '../components/ui.jsx'
 import { BrowserAlertsToggle } from '../components/Pwa.jsx'
+import { exportTextFile } from '../lib/files.js'
 
 const emptyReminder = { title: '', description: '', date: addDaysISO(todayISO(), 1), time: '09:00', category: 'Ciclo' }
 
-function downloadJson(payload, filename) {
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  link.click()
-  URL.revokeObjectURL(url)
+async function downloadJson(payload, filename) {
+  await exportTextFile({
+    filename,
+    text: JSON.stringify(payload, null, 2),
+    mimeType: 'application/json',
+    title: filename,
+  })
 }
 
 export function RemindersPage() {
@@ -159,10 +159,14 @@ export function ProfilePage() {
     logout()
     navigate('/welcome', { replace: true })
   }
-  const exportData = () => {
-    downloadJson({ version: 1, exportedAt: new Date().toISOString(), data }, `luna-cycle-backup-${todayISO()}.json`)
-    updateData((current) => ({ settings: { ...current.settings, lastBackupAt: todayISO() } }))
-    showToast('Cópia simples exportada. Para proteger com senha, use Configurações → Dados.')
+  const exportData = async () => {
+    try {
+      await downloadJson({ version: 1, exportedAt: new Date().toISOString(), data }, `luna-cycle-backup-${todayISO()}.json`)
+      updateData((current) => ({ settings: { ...current.settings, lastBackupAt: todayISO() } }))
+      showToast('Cópia simples exportada. Para proteger com senha, use Configurações → Dados.')
+    } catch {
+      showToast('Não foi possível exportar a cópia agora.', 'error')
+    }
   }
 
   return (
@@ -247,10 +251,14 @@ export function SettingsPage() {
     updateData((current) => ({ settings: { ...current.settings, cycleLength: parsed.cycleLength, periodLength: parsed.periodLength } }))
     showToast('Configurações do ciclo salvas.')
   }
-  const exportPlain = () => {
-    downloadJson({ version: 1, exportedAt: new Date().toISOString(), data }, `luna-cycle-backup-${todayISO()}.json`)
-    markBackup()
-    showToast('Cópia simples exportada. Ela não tem senha.')
+  const exportPlain = async () => {
+    try {
+      await downloadJson({ version: 1, exportedAt: new Date().toISOString(), data }, `luna-cycle-backup-${todayISO()}.json`)
+      markBackup()
+      showToast('Cópia simples exportada. Ela não tem senha.')
+    } catch {
+      showToast('Não foi possível exportar a cópia agora.', 'error')
+    }
   }
   const exportProtected = async (event) => {
     event.preventDefault()
@@ -264,7 +272,7 @@ export function SettingsPage() {
     }
     try {
       const payload = await encryptBackup(data, exportForm.password)
-      downloadJson(payload, `luna-cycle-backup-protegido-${todayISO()}.json`)
+      await downloadJson(payload, `luna-cycle-backup-protegido-${todayISO()}.json`)
       markBackup()
       setExportOpen(false)
       setExportForm({ password: '', confirm: '' })

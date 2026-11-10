@@ -12,6 +12,7 @@ import './styles.css'
 import App from './App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { AppProvider } from './context/AppContext.jsx'
+import { initNativeApp, isNativeApp } from './lib/native.js'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -25,10 +26,13 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>,
 )
 
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+if (import.meta.env.PROD && 'serviceWorker' in navigator && !isNativeApp) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {
       // Sem service worker o app continua funcionando normalmente.
     })
   })
 }
+
+// No Android nativo o shell é o próprio APK: não há service worker nem PWA.
+initNativeApp()
