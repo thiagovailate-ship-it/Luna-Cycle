@@ -3,14 +3,15 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import {
   Bell, Command, Eye, EyeOff, LockKeyhole, Menu, Search, Settings2, ShieldCheck, X,
 } from 'lucide-react'
-import { ACTIVE_PHASE } from '../data/seed.js'
-import { ALL_LINKS, getBottomNav, getLink, getNavigation } from '../data/navigation.js'
-import { getCycleInfo } from '../lib/cycle.js'
+import { PHASE_MAP } from '../data/seed.js'
+import { getAllLinks, getBottomNav, getLink, getNavigation } from '../data/navigation.js'
+import { getCycleInfo, getPregnancyInfo } from '../lib/cycle.js'
 import { relativeLabel } from '../lib/date.js'
 import { useApp } from '../context/AppContext.jsx'
 import { useReminderAlerts } from '../hooks/useReminderAlerts.js'
 import { Avatar, Icon, Logo, Modal } from './ui.jsx'
 import { AppIcon } from './AppIcon.jsx'
+import { BabyArt } from './Art.jsx'
 import { CycleOrbitArt } from './CycleArt.jsx'
 import { QuickActionFab, QuickActionsPanel } from './QuickActions.jsx'
 
@@ -21,7 +22,30 @@ function isTypingTarget(target) {
 }
 
 function JourneyCard() {
-  const { data, discreet } = useApp()
+  const { data, discreet, phase } = useApp()
+  if (phase === 'pregnancy') {
+    const pregnancy = getPregnancyInfo(data)
+    return (
+      <div className="journey-card pregnancy-journey-card">
+        <BabyArt className="journey-card-orbit" />
+        <div className="journey-card-content">
+          <div className="journey-card-head">
+            <span className="icon-circle icon-rose"><AppIcon name="Baby" size={20} /></span>
+            <div>
+              <span>Agora</span>
+              <strong>Minha gestação</strong>
+            </div>
+          </div>
+          <div className="journey-card-progress"><span style={{ width: `${Math.max(4, pregnancy.progress)}%` }} /></div>
+          <div className="journey-card-meta">
+            <span>{discreet ? 'Acompanhamento' : `Semana ${pregnancy.week} · ${pregnancy.weekLabel}`}</span>
+            <span>{discreet ? 'Com carinho' : `${pregnancy.trimester}º tri`}</span>
+          </div>
+          <Link to="/app/baby" className="journey-card-link">Ver meu bebê <Icon name="ArrowUpRight" size={14} /></Link>
+        </div>
+      </div>
+    )
+  }
   const info = getCycleInfo(data)
   return (
     <div className="journey-card">
@@ -110,12 +134,14 @@ function NotificationPanel({ open, onClose }) {
 }
 
 function SearchDialog({ open, onClose }) {
+  const { phase } = useApp()
   const [query, setQuery] = useState('')
   const navigate = useNavigate()
+  const links = getAllLinks(phase)
   const results = (() => {
     const needle = query.trim().toLowerCase()
-    if (!needle) return ALL_LINKS.slice(0, 9)
-    return ALL_LINKS.filter((link) => `${link.label} ${link.group}`.toLowerCase().includes(needle)).slice(0, 12)
+    if (!needle) return links.slice(0, 9)
+    return links.filter((link) => `${link.label} ${link.group}`.toLowerCase().includes(needle)).slice(0, 12)
   })()
 
   useEffect(() => {
@@ -128,7 +154,7 @@ function SearchDialog({ open, onClose }) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Buscar no seu ciclo" description="Encontre qualquer área rapidamente. Dica: a tecla Q abre o registro rápido." size="small">
+    <Modal open={open} onClose={onClose} title={phase === 'pregnancy' ? 'Buscar na sua gestação' : 'Buscar no seu ciclo'} description={phase === 'pregnancy' ? 'Encontre qualquer área da sua gestação rapidamente.' : 'Encontre qualquer área rapidamente. Dica: a tecla Q abre o registro rápido.'} size="small">
       <div className="search-input-wrap">
         <Search size={18} />
         <input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ex.: calendário, sintomas, relatórios..." />
@@ -151,18 +177,21 @@ function SearchDialog({ open, onClose }) {
 export default function AppShell() {
   const {
     data, toast, currentUser, discreet, setDiscreet, dismissToast,
-    openQuickActions, quickActionsOpen,
+    openQuickActions, quickActionsOpen, phase,
   } = useApp()
   const location = useLocation()
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [privacyOpen, setPrivacyOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const navigation = getNavigation()
-  const bottomNav = getBottomNav()
+  const pregnant = phase === 'pregnancy'
+  const activePhase = PHASE_MAP[phase] || PHASE_MAP.cycle
+  const navigation = getNavigation(phase)
+  const bottomNav = getBottomNav(phase)
   const unread = (data?.notifications || []).filter((item) => !item.read).length
-  const currentLink = getLink(location.pathname)
+  const currentLink = getLink(location.pathname, phase)
   const info = getCycleInfo(data)
+  const pregnancyInfo = pregnant ? getPregnancyInfo(data) : null
 
   useReminderAlerts({
     data,
@@ -185,13 +214,14 @@ export default function AppShell() {
         return
       }
       if (event.key.toLowerCase() === 'q' && !event.ctrlKey && !event.metaKey && !event.altKey && !isTypingTarget(event.target)) {
+        if (pregnant) return
         event.preventDefault()
         openQuickActions()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [openQuickActions])
+  }, [openQuickActions, pregnant])
 
   return (
     <div className={`app-shell ${discreet ? 'discreet-on' : ''} ${quickActionsOpen ? 'quick-open' : ''}`}>
@@ -217,7 +247,7 @@ export default function AppShell() {
         </nav>
         <div className="sidebar-footer">
           <AppIcon name="heart" size={17} />
-          <span>Seu ciclo, no seu ritmo.</span>
+          <span>{pregnant ? 'Cada semana, um novo começo.' : 'Seu ciclo, no seu ritmo.'}</span>
         </div>
       </aside>
       {mobileMenuOpen && <button className="sidebar-overlay" aria-label="Fechar menu" onClick={() => setMobileMenuOpen(false)} />}
@@ -228,7 +258,7 @@ export default function AppShell() {
             <button className="icon-button mobile-menu-button" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir menu"><Menu size={21} /></button>
             <div className="mobile-logo"><Logo compact subtitle={false} /></div>
             <div className="breadcrumb">
-              <span>{ACTIVE_PHASE.short}</span>
+              <span>{activePhase.short}</span>
               <Icon name="ChevronRight" size={14} />
               <strong>{currentLink.label}</strong>
             </div>
@@ -239,9 +269,13 @@ export default function AppShell() {
               <span>Buscar...</span>
               <kbd><Command size={11} /> K</kbd>
             </button>
-            <div className="topbar-cycle-badge" title="Dia do ciclo">
-              <AppIcon name="cycle" size={16} />
-              <span>{discreet ? 'Seu ciclo' : info.day ? `Dia ${info.day} · ${info.phaseName}` : 'Sem registro'}</span>
+            <div className={`topbar-cycle-badge ${pregnant ? 'is-pregnancy' : ''}`} title={pregnant ? 'Semana da gestação' : 'Dia do ciclo'}>
+              <AppIcon name={pregnant ? 'Baby' : 'cycle'} size={16} />
+              <span>
+                {pregnant
+                  ? (discreet ? 'Sua gestação' : `Semana ${pregnancyInfo.week} · ${pregnancyInfo.trimester}º tri`)
+                  : (discreet ? 'Seu ciclo' : info.day ? `Dia ${info.day} · ${info.phaseName}` : 'Sem registro')}
+              </span>
             </div>
             <button type="button" className={`icon-button privacy-trigger ${discreet ? 'is-active' : ''}`} onClick={() => setPrivacyOpen((value) => !value)} aria-label="Privacidade" aria-expanded={privacyOpen}>
               {discreet ? <EyeOff size={19} /> : <ShieldCheck size={19} />}
@@ -269,18 +303,20 @@ export default function AppShell() {
           {bottomNav.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.to === '/app'} className={({ isActive }) => `bottom-link ${isActive ? 'bottom-link-active' : ''}`}>
               <AppIcon name={item.icon} size={22} />
-              <span>{item.label === 'Registrar menstruação' ? 'Registrar' : item.label.replace('Calendário do ciclo', 'Calendário')}</span>
+              <span>{pregnant ? item.label : item.label === 'Registrar menstruação' ? 'Registrar' : item.label.replace('Calendário do ciclo', 'Calendário')}</span>
             </NavLink>
           ))}
-          <NavLink to="/app/more" className={({ isActive }) => `bottom-link ${isActive ? 'bottom-link-active' : ''}`}>
-            <AppIcon name="LayoutGrid" size={22} />
-            <span>Mais</span>
-          </NavLink>
+          {!pregnant && (
+            <NavLink to="/app/more" className={({ isActive }) => `bottom-link ${isActive ? 'bottom-link-active' : ''}`}>
+              <AppIcon name="LayoutGrid" size={22} />
+              <span>Mais</span>
+            </NavLink>
+          )}
         </nav>
       </div>
 
-      <QuickActionFab />
-      <QuickActionsPanel />
+      {!pregnant && <QuickActionFab />}
+      {!pregnant && <QuickActionsPanel />}
       <PrivacyMenu open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
       <NotificationPanel open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
       <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} />

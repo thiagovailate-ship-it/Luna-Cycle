@@ -242,18 +242,64 @@ export function getDayMeta(data, date) {
   }
 }
 
+// Curvas aproximadas de crescimento (comprimento cabeça-nádega e peso).
+// Referências: OMS/MS — valores arredondados para orientação, não diagnóstico.
+const PREGNANCY_LENGTH_CM = [
+  [8, 1.6], [10, 3.1], [12, 5.4], [14, 8.7], [16, 11.6], [18, 14.2],
+  [20, 16.4], [22, 19.0], [24, 21.5], [26, 23.5], [28, 25.5], [30, 27.0],
+  [32, 28.5], [34, 30.0], [36, 31.5], [38, 33.0], [40, 34.5], [42, 35.5],
+]
+const PREGNANCY_WEIGHT_G = [
+  [8, 1], [10, 4], [12, 14], [14, 43], [16, 100], [18, 190],
+  [20, 290], [22, 430], [24, 600], [26, 760], [28, 1000], [30, 1300],
+  [32, 1700], [34, 2150], [36, 2600], [38, 3000], [40, 3400], [42, 3600],
+]
+
+const TRIMESTERS = [
+  { id: 1, from: 1, to: 13, label: 'Primeiro trimestre' },
+  { id: 2, from: 14, to: 27, label: 'Segundo trimestre' },
+  { id: 3, from: 28, to: 42, label: 'Terceiro trimestre' },
+]
+
+function interpolatePregnancy(table, week) {
+  if (week <= table[0][0]) return table[0][1]
+  for (let index = 1; index < table.length; index += 1) {
+    const [endWeek, endValue] = table[index]
+    if (week <= endWeek) {
+      const [startWeek, startValue] = table[index - 1]
+      const ratio = (week - startWeek) / (endWeek - startWeek)
+      return startValue + (endValue - startValue) * ratio
+    }
+  }
+  return table[table.length - 1][1]
+}
+
 export function getPregnancyInfo(data, date = todayISO()) {
-  const start = data.pregnancy?.startDate || addDaysISO(date, -140)
+  const start = data.pregnancy?.startDate || addDaysISO(date, -139)
   const day = Math.max(1, daysBetween(date, start) + 1)
   const week = Math.min(42, Math.floor((day - 1) / 7) + 1)
   const days = ((day - 1) % 7)
   const progress = Math.min(100, Math.round((day / 280) * 100))
-  const sizeCm = Math.min(50, 8 + week * 0.8)
-  const weightG = Math.max(20, Math.round((week - 10) ** 3 * 0.7))
-  let trimester = 1
-  if (week >= 14) trimester = 2
-  if (week >= 28) trimester = 3
-  return { day, week, days, progress, sizeCm, weightG, trimester, dueDate: data.pregnancy?.dueDate || addDaysISO(start, 280) }
+  const sizeCm = Math.round(interpolatePregnancy(PREGNANCY_LENGTH_CM, week) * 10) / 10
+  const weightG = Math.round(interpolatePregnancy(PREGNANCY_WEIGHT_G, week))
+  const trimesterInfo = TRIMESTERS.find((item) => week >= item.from && week <= item.to) || TRIMESTERS[TRIMESTERS.length - 1]
+  const trimesterStart = addDaysISO(start, (trimesterInfo.from - 1) * 7)
+  const trimesterEnd = addDaysISO(start, trimesterInfo.to * 7 - 1)
+  return {
+    day,
+    week,
+    days,
+    weekLabel: `${week - 1}+${days}`,
+    progress,
+    sizeCm,
+    weightG,
+    trimester: trimesterInfo.id,
+    trimesterLabel: trimesterInfo.label,
+    trimesterStart,
+    trimesterEnd,
+    startDate: start,
+    dueDate: data.pregnancy?.dueDate || addDaysISO(start, 280),
+  }
 }
 
 export function getHormoneSeries(phase = 'cycle') {

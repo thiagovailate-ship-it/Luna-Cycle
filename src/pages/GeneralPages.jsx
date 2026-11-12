@@ -4,6 +4,7 @@ import { Accessibility, BellRing, Check, CircleHelp, CloudDownload, Contrast, Do
   FileUp, LockKeyhole, LogOut, Pencil, Plus, RefreshCw, Trash2, Type,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext.jsx'
+import { PHASES, PHASE_MAP } from '../data/seed.js'
 import { addDaysISO, daysBetween, formatDate, relativeLabel, todayISO, uid } from '../lib/date.js'
 import { BACKUP_MIN_PASSPHRASE, decryptBackup, encryptBackup, isEncryptedBackup } from '../lib/backup.js'
 import { CYCLE_LENGTH_LIMITS, PERIOD_LENGTH_LIMITS, parseCycleSettings } from '../lib/cycle.js'
@@ -140,7 +141,7 @@ export function NotificationsPage() {
 }
 
 export function ProfilePage() {
-  const { data, currentUser, updateProfile, updateData, logout, showToast } = useApp()
+  const { data, currentUser, updateProfile, updateData, logout, showToast, phase } = useApp()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ ...data.profile })
@@ -176,7 +177,14 @@ export function ProfilePage() {
         <div className="stack">
           <div className="profile-hero"><Avatar name={profile.name} size={76} /><div className="grow"><h2 data-sensitive>{profile.name}</h2><p data-sensitive>{profile.email}</p><div className="row wrap" style={{ marginTop: 8 }}><Badge tone="rose">{currentUser?.demo ? 'Conta demonstração' : 'Conta local'}</Badge><Badge tone="neutral">{profile.city || 'Brasil'}</Badge></div></div><IconCircle icon="UserRound" tone="rose" size="large" /></div>
           <Card><SectionTitle title="Minha conta" /><div className="stack-tight">
-            <ListRow icon="CalendarDays" title="Meu ciclo" description="Duração, histórico e previsões" meta={<Icon name="ChevronRight" size={16} />} onClick={() => navigate('/app/my-cycle')} />
+            <ListRow
+              icon={phase === 'pregnancy' ? 'Baby' : 'CalendarDays'}
+              title={phase === 'pregnancy' ? 'Minha gestação' : 'Meu ciclo'}
+              description={phase === 'pregnancy' ? 'Semana, bebê e consultas' : 'Duração, histórico e previsões'}
+              meta={<Icon name="ChevronRight" size={16} />}
+              onClick={() => navigate(phase === 'pregnancy' ? '/app/baby' : '/app/my-cycle')}
+            />
+            <ListRow icon="Heart" title="Jornada de acompanhamento" description={phase === 'pregnancy' ? 'Gravidez ativa' : 'Ciclo menstrual ativo'} meta={<Badge tone="rose">{PHASE_MAP[phase]?.short || 'Ciclo'}</Badge>} onClick={() => navigate('/app/settings', { state: { tab: 'journey' } })} tone="peach" />
             <ListRow icon="Bell" title="Notificações" description="Preferências e alertas" meta={<Icon name="ChevronRight" size={16} />} onClick={() => navigate('/app/notifications')} tone="blue" />
             <ListRow icon="Watch" title="Dispositivos conectados" description="Pulseira Luna Cycle" meta={<Icon name="ChevronRight" size={16} />} onClick={() => navigate('/app/devices')} tone="green" />
             <ListRow icon="ShieldCheck" title="Privacidade e segurança" description="Seus dados no navegador" meta={<Icon name="ChevronRight" size={16} />} onClick={() => navigate('/app/settings')} tone="purple" />
@@ -216,13 +224,18 @@ export function SettingsPage() {
   const {
     data, currentUser, updateData, resetData, importData, deleteAccount,
     showToast, setDiscreet, setPrivacySetting, setAccessibilitySetting, lockApp,
-    privacy, accessibility, discreet,
+    privacy, accessibility, discreet, phase,
   } = useApp()
   const navigate = useNavigate()
   const location = useLocation()
   const [tab, setTab] = useState(location.state?.tab || 'notifications')
   const [cycleForm, setCycleForm] = useState({ cycleLength: String(data.settings.cycleLength), periodLength: String(data.settings.periodLength) })
   const [cycleError, setCycleError] = useState(null)
+  const [pregnancyForm, setPregnancyForm] = useState({
+    dueDate: data.pregnancy?.dueDate || '',
+    babyName: data.pregnancy?.babyName || '',
+  })
+  const [pregnancyError, setPregnancyError] = useState('')
   const [exportOpen, setExportOpen] = useState(false)
   const [exportForm, setExportForm] = useState({ password: '', confirm: '' })
   const [importPayload, setImportPayload] = useState(null)
@@ -250,6 +263,40 @@ export function SettingsPage() {
     setCycleForm({ cycleLength: String(parsed.cycleLength), periodLength: String(parsed.periodLength) })
     updateData((current) => ({ settings: { ...current.settings, cycleLength: parsed.cycleLength, periodLength: parsed.periodLength } }))
     showToast('Configurações do ciclo salvas.')
+  }
+  const changePhase = (nextPhase) => {
+    if (nextPhase === phase) return
+    if (nextPhase === 'pregnancy') {
+      const dueDate = data.pregnancy?.dueDate || (data.pregnancy?.startDate ? addDaysISO(data.pregnancy.startDate, 280) : addDaysISO(todayISO(), 141))
+      const startDate = data.pregnancy?.startDate || addDaysISO(dueDate, -280)
+      updateData((current) => ({
+        settings: { ...current.settings, phase: 'pregnancy' },
+        pregnancy: { ...current.pregnancy, startDate, dueDate, babyName: current.pregnancy?.babyName || 'Bebê' },
+      }))
+      setPregnancyForm({ dueDate, babyName: data.pregnancy?.babyName || 'Bebê' })
+      setPregnancyError('')
+      showToast('Jornada de gravidez ativada. Cada semana, um novo começo.')
+      return
+    }
+    updateData((current) => ({ settings: { ...current.settings, phase: nextPhase } }))
+    showToast('Jornada de ciclo menstrual ativada.')
+  }
+  const savePregnancy = (event) => {
+    event.preventDefault()
+    if (!pregnancyForm.dueDate) {
+      setPregnancyError('Escolha a data prevista do parto para calcular as semanas.')
+      return
+    }
+    updateData((current) => ({
+      pregnancy: {
+        ...current.pregnancy,
+        dueDate: pregnancyForm.dueDate,
+        babyName: pregnancyForm.babyName.trim(),
+        startDate: addDaysISO(pregnancyForm.dueDate, -280),
+      },
+    }))
+    setPregnancyError('')
+    showToast('Dados da gestação atualizados.')
   }
   const exportPlain = async () => {
     try {
@@ -346,8 +393,64 @@ export function SettingsPage() {
   return (
     <div>
       <PageHeader eyebrow="Preferências" title="Configurações" description="Ajuste seu ciclo, privacidade e conforto visual no seu ritmo." back onBack={() => navigate(-1)} />
-      <Tabs items={[{ id: 'notifications', label: 'Notificações' }, { id: 'privacy', label: 'Privacidade' }, { id: 'comfort', label: 'Conforto' }, { id: 'cycle', label: 'Ciclo' }, { id: 'data', label: 'Dados' }]} active={tab} onChange={setTab} />
+      <Tabs items={[{ id: 'journey', label: 'Jornada' }, { id: 'notifications', label: 'Notificações' }, { id: 'privacy', label: 'Privacidade' }, { id: 'comfort', label: 'Conforto' }, { id: 'cycle', label: 'Ciclo' }, { id: 'data', label: 'Dados' }]} active={tab} onChange={setTab} />
       <div style={{ height: 16 }} />
+
+      {tab === 'journey' && (
+        <div className="split-layout">
+          <div className="stack">
+            <Card>
+              <SectionTitle title="Sua jornada" subtitle="Escolha o acompanhamento que combina com este momento" />
+              <div className="journey-options">
+                {PHASES.filter((item) => item.id === 'cycle' || item.id === 'pregnancy').map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`journey-option ${phase === item.id ? 'active' : ''}`}
+                    onClick={() => changePhase(item.id)}
+                    aria-pressed={phase === item.id}
+                  >
+                    <span className="journey-option-icon"><Icon name={item.id === 'pregnancy' ? 'Baby' : 'RefreshCw'} size={24} /></span>
+                    <span className="journey-option-copy">
+                      <strong>{item.label}</strong>
+                      <small>{item.description}</small>
+                    </span>
+                    {phase === item.id && <Badge tone="rose">Ativa</Badge>}
+                  </button>
+                ))}
+              </div>
+            </Card>
+
+            {phase === 'pregnancy' && (
+              <Card>
+                <SectionTitle title="Dados da gestação" subtitle="Usados para calcular as semanas, o tamanho e o peso do bebê" />
+                <form className="form-grid" onSubmit={savePregnancy}>
+                  <Field label="Data prevista do parto" required className="form-grid-full">
+                    <input type="date" value={pregnancyForm.dueDate} onChange={(event) => { setPregnancyForm({ ...pregnancyForm, dueDate: event.target.value }); setPregnancyError('') }} />
+                  </Field>
+                  <Field label="Nome do bebê (opcional)" className="form-grid-full">
+                    <input value={pregnancyForm.babyName} onChange={(event) => setPregnancyForm({ ...pregnancyForm, babyName: event.target.value })} placeholder="Bebê" />
+                  </Field>
+                  {pregnancyError && <div className="error-message form-grid-full" role="alert">{pregnancyError}</div>}
+                  <div className="form-grid-full"><button className="button button-primary" type="submit">Salvar dados da gestação</button></div>
+                </form>
+              </Card>
+            )}
+          </div>
+          <div className="stack">
+            <Card className="card-blush center">
+              <IconCircle icon={phase === 'pregnancy' ? 'Baby' : 'Heart'} tone="rose" size="large" />
+              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: 25, margin: '13px 0 5px' }}>{phase === 'pregnancy' ? 'Sua gestação, semana a semana' : 'Seu ciclo, no seu ritmo'}</h3>
+              <p className="muted small">{phase === 'pregnancy' ? 'Acompanhe o desenvolvimento do bebê, consultas e o seu bem-estar.' : 'Acompanhe menstruação, fertilidade, sintomas e bem-estar.'}</p>
+              <Badge tone="rose">{PHASE_MAP[phase]?.label || 'Ciclo menstrual'}</Badge>
+            </Card>
+            <Card className="info-callout">
+              <IconCircle icon="Info" tone="blue" />
+              <div><h3>Você pode trocar quando quiser</h3><p>Os registros de cada jornada ficam preservados. Alternar não apaga seus dados.</p></div>
+            </Card>
+          </div>
+        </div>
+      )}
 
       {tab === 'notifications' && <Card><SectionTitle title="Notificações" subtitle="Escolha como o Luna Cycle pode avisar você" />
         <BrowserAlertsToggle />

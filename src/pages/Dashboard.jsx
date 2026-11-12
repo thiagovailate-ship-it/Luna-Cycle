@@ -1,11 +1,11 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../context/AppContext.jsx'
-import { ACTIVE_PHASE } from '../data/seed.js'
+import { PHASE_MAP } from '../data/seed.js'
 import { formatDate, MOODS, relativeLabel, todayISO } from '../lib/date.js'
-import { getActivePeriod, getCurrentPhaseKey, getCycleInfo, getPhaseDefinitions } from '../lib/cycle.js'
+import { getActivePeriod, getCurrentPhaseKey, getCycleInfo, getPhaseDefinitions, getPregnancyInfo } from '../lib/cycle.js'
 import { useQuickLog } from '../hooks/useQuickLog.js'
-import { DecorativeLeaf } from '../components/Art.jsx'
+import { BabyArt, DecorativeLeaf } from '../components/Art.jsx'
 import { AppIcon } from '../components/AppIcon.jsx'
 import { MoodFace } from '../components/MoodFace.jsx'
 import { CycleOrbitArt, PeriodFlowArt } from '../components/CycleArt.jsx'
@@ -260,25 +260,174 @@ function CycleDashboard({ data, name, discreet }) {
   )
 }
 
+function useUpcomingAppointments(data) {
+  return useMemo(() => {
+    const today = todayISO()
+    return [...(data.appointments || [])]
+      .filter((item) => item.date >= today && item.status !== 'Cancelado')
+      .sort((a, b) => `${a.date}${a.time || ''}`.localeCompare(`${b.date}${b.time || ''}`))
+      .slice(0, 3)
+  }, [data])
+}
+
+function PregnancyDashboard({ data, discreet }) {
+  const info = getPregnancyInfo(data)
+  const upcoming = useUpcomingAppointments(data)
+  const weeksLeft = Math.max(0, 40 - info.week)
+
+  return (
+    <div className="pregnancy-dashboard">
+      <div className="stack">
+        <Card className="pregnancy-hero">
+          <div className="pregnancy-hero-top">
+            <div className="pregnancy-embryo"><BabyArt className="pregnancy-embryo-art" /></div>
+            <div className="pregnancy-hero-copy">
+              <div className="pregnancy-week-badge">
+                <strong>{discreet ? '•' : info.week}</strong>
+                <span>Semanas</span>
+              </div>
+              <span className="pregnancy-trimester">{info.trimesterLabel}</span>
+              <span className="pregnancy-range">
+                {formatDate(info.trimesterStart, 'dd/MM/yyyy')} – {formatDate(info.trimesterEnd, 'dd/MM/yyyy')}
+              </span>
+              <div className="pregnancy-progress-row">
+                <div
+                  className="pregnancy-progress"
+                  role="progressbar"
+                  aria-label="Progresso da gestação"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  aria-valuenow={info.progress}
+                >
+                  <span style={{ width: `${info.progress}%` }} />
+                </div>
+                <strong>{info.progress}%</strong>
+              </div>
+            </div>
+          </div>
+          <p className="pregnancy-hero-summary" data-sensitive>
+            {discreet
+              ? 'Seu bebê segue crescendo. Abra quando estiver à vontade.'
+              : <>Seu bebê tem aproximadamente <strong>{info.sizeCm.toFixed(0)} cm</strong> e pesa <strong>{info.weightG} g</strong>. <AppIcon name="heart" size={14} /></>}
+          </p>
+        </Card>
+
+        <div className="pregnancy-actions">
+          <Link className="pregnancy-action" to="/app/baby">
+            <span className="pregnancy-action-icon"><AppIcon name="Baby" size={23} /></span>
+            <span>Bebê da semana</span>
+          </Link>
+          <Link className="pregnancy-action" to="/app/health">
+            <span className="pregnancy-action-icon"><AppIcon name="heart" size={23} /></span>
+            <span>Minha saúde</span>
+          </Link>
+          <Link className="pregnancy-action" to="/app/symptoms">
+            <span className="pregnancy-action-icon"><AppIcon name="symptoms" size={23} /></span>
+            <span>Sintomas</span>
+          </Link>
+          <Link className="pregnancy-action" to="/app/calendar">
+            <span className="pregnancy-action-icon"><AppIcon name="calendar" size={23} /></span>
+            <span>Exames e consultas</span>
+          </Link>
+        </div>
+
+        <div className="tip-card pregnancy-tip">
+          <span className="icon-circle icon-rose"><AppIcon name="drop" size={23} /></span>
+          <div>
+            <h3>Dica do dia</h3>
+            <p>Hidrate-se! A água ajuda na circulação e no bem-estar da mãe e do bebê. Tenha uma garrafa por perto e beba em pequenos goles ao longo do dia.</p>
+          </div>
+        </div>
+
+        <Card className="pregnancy-consult-card">
+          <SectionTitle
+            title="Próximas consultas"
+            subtitle="Sua agenda de acompanhamento"
+            action={<Link className="text-button" to="/app/calendar">Ver agenda</Link>}
+          />
+          {upcoming.length === 0 ? (
+            <div className="pregnancy-empty">
+              <span className="icon-circle icon-rose"><AppIcon name="calendar" size={22} /></span>
+              <div>
+                <strong>Nenhuma consulta agendada</strong>
+                <p>Adicione consultas e exames pelo calendário para acompanhar cada etapa.</p>
+              </div>
+              <Link className="button button-secondary button-small" to="/app/calendar">Agendar</Link>
+            </div>
+          ) : (
+            <div className="consult-list">
+              {upcoming.map((item) => (
+                <Link className="consult-row" to="/app/calendar" key={item.id}>
+                  <span className="consult-icon"><AppIcon name="calendar" size={21} /></span>
+                  <span className="consult-copy">
+                    <strong>{item.title}</strong>
+                    <small>{formatDate(item.date, "d 'de' MMMM 'de' yyyy")} • {item.time || 'Sem horário'}</small>
+                  </span>
+                  <Icon name="ChevronRight" size={16} />
+                </Link>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+
+      <div className="stack">
+        <Card className="card-blush pregnancy-week-card">
+          <SectionTitle title="Sua semana" subtitle={`Semana ${info.week} · ${info.trimesterLabel}`} />
+          <div className="pregnancy-week-stats">
+            <div><span>Semana</span><strong>{info.week}</strong><small>{info.weekLabel}</small></div>
+            <div><span>Faltam</span><strong>{weeksLeft}</strong><small>{weeksLeft === 1 ? 'semana' : 'semanas'}</small></div>
+            <div><span>DPP</span><strong>{formatDate(info.dueDate, 'dd/MM')}</strong><small>{formatDate(info.dueDate, 'yyyy')}</small></div>
+          </div>
+          <Link to="/app/baby" className="button button-primary button-block">
+            Ver meu bebê <Icon name="ArrowUpRight" size={15} />
+          </Link>
+        </Card>
+        <Card className="info-callout">
+          <span className="icon-circle icon-lavender"><AppIcon name="sparkles" size={22} /></span>
+          <div>
+            <h3>Um dia de cada vez</h3>
+            <p>O pré-natal é a melhor fonte de informação sobre a sua gestação. Tamanho e peso são estimativas.</p>
+          </div>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
 export default function Dashboard() {
-  const { data, currentUser, discreet } = useApp()
+  const { data, currentUser, discreet, phase } = useApp()
   const name = currentUser?.name || data.profile.name
+  const activePhase = PHASE_MAP[phase] || PHASE_MAP.cycle
   const today = formatDate(todayISO(), "EEEE, d 'de' MMMM 'de' yyyy")
+  const pregnant = phase === 'pregnancy'
   return (
     <div>
       <div className="dashboard-greeting">
         <div>
-          <div className="eyebrow">{discreet ? 'Seu espaço' : ACTIVE_PHASE.label}</div>
+          <div className="eyebrow">{discreet ? 'Seu espaço' : activePhase.label}</div>
           <h1>{discreet ? 'Olá!' : `Olá, ${name.split(' ')[0]}!`}</h1>
-          <p>{discreet ? 'Seu acompanhamento está aqui, com discrição e no seu tempo.' : `${ACTIVE_PHASE.subtitle} — acompanhe seu ciclo e bem-estar hoje.`}</p>
+          <p>
+            {discreet
+              ? 'Seu acompanhamento está aqui, com discrição e no seu tempo.'
+              : pregnant
+                ? <>Sua jornada de gestação está indo muito bem. <span className="pregnancy-heart"><AppIcon name="heart" size={14} /></span></>
+                : `${activePhase.subtitle} — acompanhe seu ciclo e bem-estar hoje.`}
+          </p>
         </div>
-        <div className="dashboard-date"><AppIcon name="calendar" size={17} />{today}</div>
+        {!pregnant && <div className="dashboard-date"><AppIcon name="calendar" size={17} />{today}</div>}
       </div>
-      <ComfortStrip data={data} discreet={discreet} />
-      <div style={{ height: 14 }} />
-      <PeriodQuickCard data={data} />
-      <div className="section-spacer" />
-      <CycleDashboard data={data} name={name} discreet={discreet} />
+      {pregnant ? (
+        <PregnancyDashboard data={data} discreet={discreet} />
+      ) : (
+        <>
+          <ComfortStrip data={data} discreet={discreet} />
+          <div style={{ height: 14 }} />
+          <PeriodQuickCard data={data} />
+          <div className="section-spacer" />
+          <CycleDashboard data={data} name={name} discreet={discreet} />
+        </>
+      )}
       <DecorativeLeaf className="decorative-leaf" />
     </div>
   )

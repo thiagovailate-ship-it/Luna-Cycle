@@ -24,6 +24,7 @@ export function normalizeUserData(rawData = {}) {
     rawData?.settings?.phase || 'cycle',
   )
   const settings = rawData?.settings || {}
+  const phase = settings.phase === 'pregnancy' ? 'pregnancy' : 'cycle'
   return {
     ...defaults,
     ...rawData,
@@ -31,7 +32,7 @@ export function normalizeUserData(rawData = {}) {
     settings: {
       ...defaults.settings,
       ...settings,
-      phase: 'cycle',
+      phase,
       notifications: { ...defaults.settings.notifications, ...(settings.notifications || {}) },
       privacy: { ...defaults.settings.privacy, ...(settings.privacy || {}) },
       accessibility: { ...defaults.settings.accessibility, ...(settings.accessibility || {}) },
@@ -39,7 +40,7 @@ export function normalizeUserData(rawData = {}) {
     cycle: { ...defaults.cycle, ...(rawData?.cycle || {}) },
     periodDays: Array.isArray(rawData?.periodDays) ? rawData.periodDays : defaults.periodDays,
     devices: { ...defaults.devices, ...(rawData?.devices || {}) },
-    pregnancy: { ...defaults.pregnancy, ...(rawData?.pregnancy || {}) },
+    pregnancy: { startDate: null, dueDate: null, babyName: '', favorite: false, ...(rawData?.pregnancy || {}) },
     menopause: { ...defaults.menopause, ...(rawData?.menopause || {}) },
     moods: Array.isArray(rawData?.moods) ? rawData.moods : defaults.moods,
     water: Array.isArray(rawData?.water) ? rawData.water : defaults.water,
@@ -47,7 +48,7 @@ export function normalizeUserData(rawData = {}) {
     vitals: Array.isArray(rawData?.vitals) ? rawData.vitals : defaults.vitals,
     reminders: Array.isArray(rawData?.reminders) ? rawData.reminders : defaults.reminders,
     exams: Array.isArray(rawData?.exams) ? rawData.exams : defaults.exams,
-    appointments: Array.isArray(rawData?.appointments) ? rawData.appointments : defaults.appointments,
+    appointments: Array.isArray(rawData?.appointments) ? rawData.appointments : [],
     diary: Array.isArray(rawData?.diary) ? rawData.diary : defaults.diary,
     notifications: Array.isArray(rawData?.notifications) ? rawData.notifications : defaults.notifications,
     favorites: Array.isArray(rawData?.favorites) ? rawData.favorites : defaults.favorites,

@@ -39,7 +39,7 @@ export function AppProvider({ children }) {
   )
 
   const data = currentUser?.data || null
-  const phase = 'cycle'
+  const phase = data?.settings?.phase === 'pregnancy' ? 'pregnancy' : 'cycle'
   const accessibility = useMemo(
     () => data?.settings?.accessibility || DEFAULT_ACCESSIBILITY,
     [data?.settings?.accessibility],

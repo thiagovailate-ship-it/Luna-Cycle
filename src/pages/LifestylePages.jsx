@@ -1,16 +1,16 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { CalendarPlus, Heart, Pencil, Plus, Trash2 } from 'lucide-react'
+import { CalendarPlus, ArrowLeft, Heart, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useApp } from '../context/AppContext.jsx'
 import { WELLNESS_ARTICLES } from '../data/seed.js'
-import { formatDate, MOODS, relativeLabel, todayISO, uid } from '../lib/date.js'
+import { addDaysISO, formatDate, MOODS, relativeLabel, todayISO, uid } from '../lib/date.js'
 import { getPregnancyInfo } from '../lib/cycle.js'
 import CalendarView from '../components/CalendarView.jsx'
 import { BabyArt, DecorativeLeaf } from '../components/Art.jsx'
 import { AppIcon } from '../components/AppIcon.jsx'
-import { Card, EmptyState, Field, Icon, IconCircle, ListRow, Modal, PageHeader, Pill, SectionTitle, StatCard } from '../components/ui.jsx'
+import { Card, EmptyState, Field, Icon, IconCircle, ListRow, Modal, PageHeader, Pill, SectionTitle } from '../components/ui.jsx'
 import { InstallAppCard } from '../components/Pwa.jsx'
-import { ALL_LINKS } from '../data/navigation.js'
+import { getAllLinks } from '../data/navigation.js'
 
 const categories = ['Todos', 'Alimentação', 'Exercício', 'Sono', 'Saúde mental', 'Ciclo']
 
@@ -169,15 +169,21 @@ export function BabyPage() {
   const { data, updateData, showToast } = useApp()
   const navigate = useNavigate()
   const info = getPregnancyInfo(data)
-  const [dueDate, setDueDate] = useState(data.pregnancy.dueDate)
+  const [dueDate, setDueDate] = useState(data.pregnancy.dueDate || info.dueDate)
   const milestones = [
-    { icon: 'Activity', title: 'Movimentos mais frequentes', description: 'O bebê se movimenta com mais força.' },
-    { icon: 'Brain', title: 'Desenvolvimento do cérebro', description: 'As conexões neurológicas avançam.' },
-    { icon: 'Ear', title: 'Formação dos primeiros sons', description: 'O bebê começa a reconhecer sons.' },
+    { icon: 'Activity', title: 'Movimentos mais frequentes', description: 'O bebê se movimenta com mais força e você pode começar a sentir os primeiros movimentos.' },
+    { icon: 'Brain', title: 'Desenvolvimento do cérebro', description: 'As conexões neurológicas avançam e os sentidos ficam mais refinados.' },
+    { icon: 'Wind', title: 'Formação dos pulmões', description: 'Os pulmões seguem se desenvolvendo para a respiração fora do útero.' },
   ]
 
   const saveDate = () => {
-    updateData((current) => ({ pregnancy: { ...current.pregnancy, dueDate } }))
+    updateData((current) => ({
+      pregnancy: {
+        ...current.pregnancy,
+        dueDate,
+        startDate: addDaysISO(dueDate, -280),
+      },
+    }))
     showToast('Data prevista do parto atualizada.')
   }
 
@@ -186,44 +192,107 @@ export function BabyPage() {
   }
 
   return (
-    <div>
-      <PageHeader eyebrow="Gravidez" title="Meu bebê" description={`Semana ${info.week} da gestação`} back onBack={() => navigate(-1)} actions={<button className={`button ${data.pregnancy.favorite ? 'button-primary' : 'button-secondary'}`} onClick={toggleFavorite}><Heart size={16} fill={data.pregnancy.favorite ? 'currentColor' : 'none'} /> {data.pregnancy.favorite ? 'Favorito' : 'Favoritar'}</button>} />
-      <div className="split-layout">
-        <div className="stack">
-          <Card className="baby-hero">
-            <div>
-              <div className="baby-week"><span>{info.week}</span> Semana {info.week} ({info.week}+{info.days})</div>
-              <h2>Conheça seu bebê</h2>
-              <p className="muted small">Nesta fase, os ossos continuam se fortalecendo, os sentidos se desenvolvem e o bebê já movimenta bastante!</p>
-              <div className="baby-progress"><span style={{ width: `${info.progress}%` }} /></div>
-              <div className="row-between small muted"><span>{formatDate(data.pregnancy.startDate, 'dd/MM/yyyy')}</span><strong>{info.progress}% concluído</strong></div>
-              <div className="baby-measures">
-                <div className="baby-measure"><span>Comprimento</span><strong>{info.sizeCm.toFixed(0)} cm</strong><small className="muted">cerca de um abacate</small></div>
-                <div className="baby-measure"><span>Peso</span><strong>{info.weightG} g</strong><small className="muted">cerca de uma maçã</small></div>
+    <div className="baby-page">
+      <header className="baby-header">
+        <button type="button" className="icon-button" onClick={() => navigate(-1)} aria-label="Voltar">
+          <ArrowLeft size={19} />
+        </button>
+        <h1>Meu bebê</h1>
+        <button
+          type="button"
+          className={`icon-button baby-favorite ${data.pregnancy.favorite ? 'is-active' : ''}`}
+          onClick={toggleFavorite}
+          aria-label={data.pregnancy.favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+          aria-pressed={Boolean(data.pregnancy.favorite)}
+        >
+          <Heart size={20} fill={data.pregnancy.favorite ? 'currentColor' : 'none'} />
+        </button>
+      </header>
+
+      <div className="baby-page-layout">
+        <div className="baby-main">
+          <div className="baby-week-heading">
+            <h2>Semana {info.week}</h2>
+            <span>({info.weekLabel})</span>
+          </div>
+
+          <div className="baby-illustration-circle">
+            <BabyArt className="baby-illustration-art" />
+          </div>
+
+          <div className="baby-about">
+            <h2>Seu bebê</h2>
+            <p>Nesta fase, os ossos continuam se fortalecendo, os sentidos se desenvolvem e ele já movimenta bastante!</p>
+          </div>
+
+          <div className="baby-metrics">
+            <div className="baby-metric">
+              <span className="baby-metric-icon"><Icon name="Ruler" size={20} /></span>
+              <div>
+                <span>Comprimento</span>
+                <strong>{info.sizeCm.toFixed(0)} cm</strong>
+                <small>(cerca de um abacate)</small>
               </div>
             </div>
-            <BabyArt className="baby-art" />
-          </Card>
-          <Card>
-            <SectionTitle title="O que esperar" subtitle={`Marcos da semana ${info.week}`} />
-            <div className="stack-tight">{milestones.map((item) => <ListRow key={item.title} icon={item.icon} title={item.title} description={item.description} meta={<Icon name="ChevronRight" size={16} />} />)}</div>
-          </Card>
-        </div>
-        <div className="stack">
-          <Card className="card-blush">
-            <SectionTitle title="Minha gestação" subtitle="Informações importantes" />
+            <div className="baby-metric">
+              <span className="baby-metric-icon"><Icon name="Scale" size={20} /></span>
+              <div>
+                <span>Peso</span>
+                <strong>{info.weightG} g</strong>
+                <small>(cerca de uma manga)</small>
+              </div>
+            </div>
+          </div>
+
+          <Card className="baby-expect">
+            <SectionTitle title="O que esperar" />
             <div className="stack-tight">
-              <StatCard icon="CalendarDays" label="Trimestre" value={`${info.trimester}º`} hint="Em andamento" />
-              <StatCard icon="Baby" label="Semana" value={info.week} hint={`${info.days} dias completos`} tone="rose" />
-              <StatCard icon="Sparkles" label="Dias de jornada" value={info.day} hint="Desde o início" tone="green" />
+              {milestones.map((item) => (
+                <ListRow
+                  key={item.title}
+                  icon={item.icon}
+                  title={item.title}
+                  description={item.description}
+                  meta={<Icon name="ChevronRight" size={16} />}
+                />
+              ))}
             </div>
           </Card>
+        </div>
+
+        <div className="stack baby-side">
+          <Card className="card-blush">
+            <SectionTitle title={`Semana ${info.week}`} subtitle={info.trimesterLabel} />
+            <div className="baby-side-stats">
+              <div>
+                <span>Progresso da gestação</span>
+                <strong>{info.progress}%</strong>
+                <div className="baby-progress"><span style={{ width: `${info.progress}%` }} /></div>
+              </div>
+              <div>
+                <span>Data prevista do parto</span>
+                <strong>{formatDate(info.dueDate, "d 'de' MMMM 'de' yyyy")}</strong>
+              </div>
+              <div>
+                <span>Faltam</span>
+                <strong>{Math.max(0, 40 - info.week)} semanas</strong>
+              </div>
+            </div>
+          </Card>
+
           <Card>
-            <SectionTitle title="Data prevista do parto" />
-            <Field label="Atualize sua previsão"><input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></Field>
+            <SectionTitle title="Data prevista do parto" subtitle="Você pode atualizar quando quiser" />
+            <Field label="Nova previsão"><input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></Field>
             <button className="button button-primary button-block" style={{ marginTop: 12 }} onClick={saveDate}>Salvar data</button>
           </Card>
-          <Card className="info-callout"><IconCircle icon="Info" tone="blue" /><div><h3>Estimativas</h3><p>Tamanho e peso são aproximados. O acompanhamento pré-natal é a fonte mais confiável de informação.</p></div></Card>
+
+          <Card className="info-callout">
+            <IconCircle icon="Info" tone="blue" />
+            <div>
+              <h3>Estimativas</h3>
+              <p>Tamanho e peso são aproximados. O acompanhamento pré-natal é a fonte mais confiável de informação.</p>
+            </div>
+          </Card>
         </div>
       </div>
     </div>
@@ -270,7 +339,7 @@ export function PregnancyCalendarPage() {
             </div>
           </Card>
           <Card>
-            <SectionTitle title="Próximas consultas" action={<Link className="text-button" to="/app/exams">Ver exames</Link>} />
+            <SectionTitle title="Próximas consultas" action={<Link className="text-button" to="/app/reminders">Ver lembretes</Link>} />
             <div className="stack-tight">{[...data.appointments].filter((item) => item.date >= todayISO()).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5).map((item) => <ListRow key={item.id} icon="Stethoscope" title={item.title} description={`${item.time} · ${item.professional}`} meta={relativeLabel(item.date)} />)}</div>
           </Card>
         </div>
@@ -287,18 +356,19 @@ export function PregnancyCalendarPage() {
 }
 
 export function MoreMenuPage() {
+  const { phase } = useApp()
   const navigate = useNavigate()
   const groups = useMemo(() => {
     const map = new Map()
-    ALL_LINKS.forEach((link) => {
+    getAllLinks(phase).forEach((link) => {
       if (!map.has(link.group)) map.set(link.group, [])
       map.get(link.group).push(link)
     })
     return [...map.entries()]
-  }, [])
+  }, [phase])
   return (
     <div>
-      <PageHeader eyebrow="Navegação" title="Mais" description="Todas as áreas do seu ciclo em um só lugar." back onBack={() => navigate(-1)} />
+      <PageHeader eyebrow="Navegação" title="Mais" description={phase === 'pregnancy' ? 'Todas as áreas da sua gestação em um só lugar.' : 'Todas as áreas do seu ciclo em um só lugar.'} back onBack={() => navigate(-1)} />
       <div className="stack">
         <InstallAppCard />
         {groups.map(([group, links]) => (

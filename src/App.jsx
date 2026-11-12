@@ -9,7 +9,7 @@ import Onboarding from './pages/Onboarding.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import { CycleCalendarPage, HealthPage, MenstruationPage, MyCyclePage } from './pages/CyclePages.jsx'
 import { DevicesPage, HormonesPage, ReportsPage, SymptomsPage } from './pages/HealthPages.jsx'
-import { MoreMenuPage, TipsPage, WellnessPage } from './pages/LifestylePages.jsx'
+import { MoreMenuPage, BabyPage, DiaryPage, PregnancyCalendarPage, TipsPage, WellnessPage } from './pages/LifestylePages.jsx'
 import {
   AboutPage, NotificationsPage, ProfilePage, RemindersPage, SettingsPage, SupportPage,
 } from './pages/GeneralPages.jsx'
@@ -17,7 +17,7 @@ import {
 // Caminhos das jornadas antigas continuam redirecionando para o início.
 // Os arquivos dessas telas foram preservados no projeto, mas não fazem parte da navegação ativa.
 const hiddenPaths = [
-  'calendar', 'baby', 'diary', 'exams', 'exam-calendar', 'preventive', 'history',
+  'exams', 'exam-calendar', 'preventive', 'history',
   'exam-tips', 'schedule-exam', 'units', 'e-sus', 'alerts',
 ]
 
@@ -56,6 +56,11 @@ function PublicOnly({ children }) {
   return authenticated ? <Navigate to="/app" replace /> : children
 }
 
+function PregnancyOnly({ children }) {
+  const { phase } = useApp()
+  return phase === 'pregnancy' ? children : <Navigate to="/app" replace />
+}
+
 export default function App() {
   const { authenticated, locked } = useApp()
   return (
@@ -71,6 +76,9 @@ export default function App() {
           <Route path="cycle-calendar" element={<CycleCalendarPage />} />
           <Route path="menstruation" element={<MenstruationPage />} />
           <Route path="my-cycle" element={<MyCyclePage />} />
+          <Route path="calendar" element={<PregnancyOnly><PregnancyCalendarPage /></PregnancyOnly>} />
+          <Route path="baby" element={<PregnancyOnly><BabyPage /></PregnancyOnly>} />
+          <Route path="diary" element={<PregnancyOnly><DiaryPage /></PregnancyOnly>} />
           <Route path="health" element={<HealthPage />} />
           <Route path="symptoms" element={<SymptomsPage />} />
           <Route path="hormones" element={<HormonesPage />} />

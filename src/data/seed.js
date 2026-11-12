@@ -234,7 +234,10 @@ export function createDefaultData(name = 'Luciene Oliveira', email = 'luciene@em
       { id: uid('rem'), title: 'Preparar compressa morna', description: 'Cuidado para dias de cólica', date: addDaysISO(today, 8), time: '19:00', category: 'Bem-estar', active: true, done: false },
     ],
     exams: [],
-    appointments: [],
+    appointments: [
+      { id: uid('app'), title: 'Ultrassom morfológica', date: addDaysISO(today, 6), time: '08:00', professional: 'Dra. Mariana Costa', location: 'Clínica Vida', status: 'Agendado' },
+      { id: uid('app'), title: 'Consulta pré-natal', date: addDaysISO(today, 27), time: '09:30', professional: 'Dra. Mariana Costa', location: 'Clínica Vida', status: 'Agendado' },
+    ],
     diary: [],
     notifications: [
       { id: uid('notif'), title: 'Seu ciclo está na fase fértil', description: 'Acompanhe os sinais do seu corpo hoje.', date: today, time: '08:30', read: false, category: 'Ciclo' },
@@ -244,7 +247,7 @@ export function createDefaultData(name = 'Luciene Oliveira', email = 'luciene@em
       { id: uid('notif'), title: 'Relatório do ciclo pronto', description: 'Veja seus padrões dos últimos meses.', date: addDaysISO(today, -5), time: '10:12', read: true, category: 'Relatório' },
     ],
     devices: { connected: true, battery: 78, name: 'Pulseira Luna Cycle', lastSync: today },
-    pregnancy: { startDate: null, dueDate: null, babyName: '', favorite: false },
+    pregnancy: { startDate: addDaysISO(today, -139), dueDate: addDaysISO(today, 141), babyName: 'Bebê', favorite: true },
     menopause: { stage: 'Ciclo menstrual', startAge: null, focus: ['Ciclo', 'Humor', 'Sintomas'] },
     favorites: ['cycle-nutrition', 'sleep'],
     createdAt: new Date().toISOString(),

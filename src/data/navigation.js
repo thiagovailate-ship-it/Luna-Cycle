@@ -19,6 +19,24 @@ export const ALL_LINKS = [
   { to: '/app/support', label: 'Ajuda e suporte', icon: 'CircleHelp', group: 'Conta' },
 ]
 
+// Jornada de gravidez: navegação ativa quando settings.phase === 'pregnancy'.
+export const PREGNANCY_LINKS = [
+  { to: '/app', label: 'Início', icon: 'House', group: 'Minha gestação' },
+  { to: '/app/baby', label: 'Meu bebê', icon: 'Baby', group: 'Minha gestação' },
+  { to: '/app/calendar', label: 'Calendário', icon: 'CalendarDays', group: 'Minha gestação' },
+  { to: '/app/diary', label: 'Diário', icon: 'BookHeart', group: 'Minha gestação' },
+  { to: '/app/health', label: 'Saúde', icon: 'HeartPulse', group: 'Saúde' },
+  { to: '/app/symptoms', label: 'Sintomas', icon: 'Stethoscope', group: 'Saúde' },
+  { to: '/app/reports', label: 'Relatórios', icon: 'ChartColumn', group: 'Saúde' },
+  { to: '/app/wellness', label: 'Bem-estar', icon: 'Flower2', group: 'Cuidados' },
+  { to: '/app/tips', label: 'Dicas e orientações', icon: 'Lightbulb', group: 'Cuidados' },
+  { to: '/app/reminders', label: 'Lembretes', icon: 'BellRing', group: 'Cuidados' },
+  { to: '/app/notifications', label: 'Notificações', icon: 'Bell', group: 'Cuidados' },
+  { to: '/app/profile', label: 'Perfil', icon: 'User', group: 'Conta' },
+  { to: '/app/settings', label: 'Configurações', icon: 'Settings', group: 'Conta' },
+  { to: '/app/support', label: 'Ajuda e suporte', icon: 'CircleHelp', group: 'Conta' },
+]
+
 // Preservado para uma possível reativação futura. Não aparece na interface.
 export const LEGACY_LINKS = [
   { to: '/app/calendar', label: 'Calendário', icon: 'CalendarRange', group: 'Gravidez' },
@@ -57,6 +75,7 @@ export const LEGACY_GROUPS = {
 }
 
 const byTo = Object.fromEntries(ALL_LINKS.map((link) => [link.to, link]))
+const pregnancyByTo = Object.fromEntries(PREGNANCY_LINKS.map((link) => [link.to, link]))
 
 const activeGroups = [
   { title: 'Meu ciclo', items: ['/app', '/app/cycle-calendar', '/app/menstruation', '/app/my-cycle'] },
@@ -65,14 +84,36 @@ const activeGroups = [
   { title: 'Conta', items: ['/app/profile', '/app/settings', '/app/about', '/app/support'] },
 ]
 
-export function getNavigation() {
-  return activeGroups.map((group) => ({
+const pregnancyGroups = [
+  { title: 'Minha gestação', items: ['/app', '/app/baby', '/app/calendar', '/app/diary'] },
+  { title: 'Saúde', items: ['/app/health', '/app/symptoms', '/app/reports'] },
+  { title: 'Cuidados', items: ['/app/reminders', '/app/wellness', '/app/tips', '/app/notifications'] },
+  { title: 'Conta', items: ['/app/profile', '/app/settings', '/app/support'] },
+]
+
+export function getAllLinks(phase = 'cycle') {
+  return phase === 'pregnancy' ? PREGNANCY_LINKS : ALL_LINKS
+}
+
+export function getNavigation(phase = 'cycle') {
+  const groups = phase === 'pregnancy' ? pregnancyGroups : activeGroups
+  const links = phase === 'pregnancy' ? pregnancyByTo : byTo
+  return groups.map((group) => ({
     title: group.title,
-    items: group.items.map((to) => byTo[to]).filter(Boolean),
+    items: group.items.map((to) => links[to]).filter(Boolean),
   }))
 }
 
-export function getBottomNav() {
+export function getBottomNav(phase = 'cycle') {
+  if (phase === 'pregnancy') {
+    return [
+      pregnancyByTo['/app'],
+      pregnancyByTo['/app/calendar'],
+      pregnancyByTo['/app/health'],
+      pregnancyByTo['/app/baby'],
+      pregnancyByTo['/app/profile'],
+    ]
+  }
   return [
     byTo['/app'],
     byTo['/app/cycle-calendar'],
@@ -81,6 +122,8 @@ export function getBottomNav() {
   ]
 }
 
-export function getLink(pathname) {
-  return ALL_LINKS.find((link) => link.to === pathname) || byTo['/app']
+export function getLink(pathname, phase = 'cycle') {
+  const links = phase === 'pregnancy' ? PREGNANCY_LINKS : ALL_LINKS
+  const fallback = phase === 'pregnancy' ? pregnancyByTo['/app'] : byTo['/app']
+  return links.find((link) => link.to === pathname) || fallback
 }
