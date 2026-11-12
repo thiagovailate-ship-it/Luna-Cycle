@@ -74,6 +74,16 @@ export function getCycleStats(data) {
   let confidence = 'baixa'
   if (usesHistory && intervals.length >= 3 && spread <= 1) confidence = 'alta'
   else if (usesHistory && intervals.length >= 2 && spread <= 3) confidence = 'média'
+  const method = usesHistory
+    ? `Mediana dos últimos ${intervals.length} intervalo(s) entre menstruações (amostra de até ${HISTORY_SAMPLE}).`
+    : 'Duração de referência informada/configurada (sem histórico suficiente).'
+  const limitations = [
+    'Estimativa por método de calendário; não identifica ovulação real nem confirma fertilidade.',
+    'A ovulação é estimada como comprimento do ciclo menos 14 dias (fase lútea média), o que pode variar.',
+  ]
+  if (!usesHistory) limitations.push('Com poucos registros, a previsão tende a ser menos precisa.')
+  else if (intervals.length < 3 || spread > 3 || irregular) limitations.push('Ciclos variáveis reduzem a precisão das datas previstas.')
+  limitations.push('Não deve ser usado como método contraceptivo nem para decisões clínicas.')
 
   return {
     length,
@@ -87,6 +97,8 @@ export function getCycleStats(data) {
     source: usesHistory ? 'history' : 'configured',
     irregular,
     confidence,
+    method,
+    limitations,
   }
 }
 

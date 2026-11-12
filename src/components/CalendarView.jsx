@@ -55,8 +55,8 @@ export default function CalendarView({ data, selectedDate = todayISO(), onSelect
         {mode === 'cycle' ? (
           <>
             <span><i className="legend-icon legend-rose"><AppIcon name="drop" size={13} /></i>{discreet ? 'Ciclo' : 'Menstruação'}</span>
-            <span><i className="legend-icon legend-green"><AppIcon name="leaf" size={13} /></i>{discreet ? 'Fase 2' : 'Período fértil'}</span>
-            <span><i className="legend-icon legend-purple"><AppIcon name="sparkles" size={13} /></i>{discreet ? 'Fase 3' : 'Ovulação'}</span>
+            <span><i className="legend-icon legend-green"><AppIcon name="leaf" size={13} /></i>{discreet ? 'Fase 2' : 'Janela fértil (estimada)'}</span>
+            <span><i className="legend-icon legend-purple"><AppIcon name="sparkles" size={13} /></i>{discreet ? 'Fase 3' : 'Ovulação (estimada)'}</span>
             <span><i className="legend-icon legend-blue"><AppIcon name="bell" size={13} /></i>Lembretes</span>
             <span><i className="legend-dot legend-today" />Hoje</span>
           </>

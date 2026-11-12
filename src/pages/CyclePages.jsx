@@ -74,7 +74,7 @@ export function CycleCalendarPage() {
           <Card className="card-blush">
             <div className="row-between" style={{ marginBottom: 10 }}>
               <div><div className="eyebrow">Dia selecionado</div><h2 style={{ margin: 0, fontFamily: 'var(--font-serif)', fontSize: 26 }}>{formatDate(selectedDate, "d 'de' MMMM")}</h2></div>
-              <Badge tone={meta.isPeriod ? 'rose' : meta.isFertile ? 'green' : 'neutral'}>{discreet ? `Dia ${meta.cycleDay}` : meta.isPeriod ? 'Menstruação' : meta.isOvulation ? 'Ovulação' : meta.isFertile ? 'Fase fértil' : `Dia ${meta.cycleDay}`}</Badge>
+              <Badge tone={meta.isPeriod ? 'rose' : meta.isFertile ? 'green' : 'neutral'}>{discreet ? `Dia ${meta.cycleDay}` : meta.isPeriod ? 'Menstruação' : meta.isOvulation ? 'Ovulação (estimada)' : meta.isFertile ? 'Janela fértil (estimada)' : `Dia ${meta.cycleDay}`}</Badge>
             </div>
             <div className="day-detail-list">
               {dayEvents.length === 0 && <div className="info-callout"><IconCircle icon="Sparkles" tone="rose" /><div><h3>Tudo tranquilo por aqui</h3><p>Se quiser, registre um sintoma ou crie um lembrete. Sem obrigação.</p></div></div>}
@@ -359,7 +359,7 @@ function CyclePhasesGuide({ info }) {
           </div>
         ))}
       </div>
-      <p className="cycle-phase-note"><AppIcon name="info" size={14} /> {sourceNote} As previsões não substituem um método contraceptivo.</p>
+      <p className="cycle-phase-note"><AppIcon name="info" size={14} /> {sourceNote} Ovulação e janela fértil são <strong>estimativas de calendário</strong> (não confirmam ovulação real). Não use como método contraceptivo.</p>
     </Card>
   )
 }
@@ -406,7 +406,7 @@ export function MyCyclePage() {
           <div className="grid grid-4">
             <StatCard icon="CalendarDays" label="Duração do ciclo" value={`${info.length} dias`} hint={info.stats.source === 'history' ? `Mediana dos últimos ${info.cycleCount} ciclos` : 'Duração de referência'} />
             <StatCard icon="Droplet" label="Duração da menstruação" value={`${info.periodLength} dias`} hint="Duração média" tone="rose" />
-            <StatCard icon="Heart" label="Fase fértil" value={`${info.fertileStart} ao ${info.fertileEnd}`} hint="Dias do ciclo" tone="green" />
+            <StatCard icon="Heart" label="Janela fértil (estimada)" value={`${info.fertileStart} ao ${info.fertileEnd}`} hint="Estimativa · dias do ciclo" tone="green" />
             <StatCard icon="Sparkles" label="Ovulação estimada" value={`Dia ${info.ovulationDay}`} hint={`Confiança ${info.confidence}`} tone="purple" />
           </div>
           <CyclePhasesGuide info={info} />
@@ -486,7 +486,8 @@ export function MyCyclePage() {
               {futureStarts.map((date, index) => (
                 <ListRow key={date} icon="Droplet" title={`Ciclo ${index + 1}`} description={`${formatDate(date, 'dd/MM/yyyy')} a ${formatDate(addDaysISO(date, info.periodLength - 1), 'dd/MM/yyyy')}`} meta={relativeLabel(date)} />
               ))}
-              <div className="info-callout"><IconCircle icon="Info" tone="blue" /><div><h3>Previsões são estimativas</h3><p>Ciclos podem variar com estresse, sono, saúde e outros fatores. Use as previsões como apoio, não como método contraceptivo.</p></div></div>
+              <div className="info-callout"><IconCircle icon="Info" tone="blue" /><div><h3>Como calculamos</h3><p>{info.stats.method} Confiança: <strong>{info.confidence}</strong> (varia com quantidade e regularidade dos registros). Ovulação/janela fértil são estimativas de calendário e não confirmam ovulação real.</p></div></div>
+              <div className="info-callout"><IconCircle icon="ShieldCheck" tone="purple" /><div><h3>Limites e segurança</h3><ul className="small muted" style={{ margin: '6px 0 0', paddingLeft: 18, lineHeight: 1.6 }}>{(info.stats.limitations || []).map((item) => <li key={item}>{item}</li>)}</ul></div></div>
             </div>
           </Card>
         </div>
@@ -534,7 +535,7 @@ export function HealthPage() {
             <div className="vital-display"><strong>{String(latest[metric.key] ?? '—').replace('.', ',')} <span style={{ fontFamily: 'var(--font-sans)', fontSize: 18 }}>{metric.unit}</span></strong><span>Último registro: {formatDate(latest.date || form.date, 'dd/MM/yyyy')}</span></div>
             <LineChart data={vitals} lines={[{ key: metric.key, label: metric.label, color: metric.color }]} unit={metric.unit} />
           </Card>
-          <Card className="info-callout"><IconCircle icon="Lightbulb" tone="peach" /><div><h3>Você sabia?</h3><p>{tab === 'temperature' ? 'A temperatura da pele tende a aumentar após a ovulação e continua elevada durante a fase lútea.' : tab === 'sleep' ? 'Manter horários regulares de sono ajuda no equilíbrio hormonal.' : 'Pequenas variações são normais. Observe tendências, não apenas um único registro.'}</p></div></Card>
+          <Card className="info-callout"><IconCircle icon="Lightbulb" tone="peach" /><div><h3>Você sabia?</h3><p>{tab === 'temperature' ? 'Em muitas pessoas, a temperatura corporal basal sobe levemente após a ovulação e pode permanecer mais alta na fase lútea; leituras de pele/pulseira podem variar e não confirmam ovulação.' : tab === 'sleep' ? 'Manter horários regulares de sono pode apoiar seu bem-estar e sua rotina ao longo do ciclo.' : 'Pequenas variações são normais. Observe tendências ao longo do tempo, não apenas um único registro.'}</p></div></Card>
         </div>
         <div className="stack">
           <Card className="card-blush">

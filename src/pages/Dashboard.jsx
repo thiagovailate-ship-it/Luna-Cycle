@@ -214,14 +214,14 @@ function CycleDashboard({ data, name, discreet }) {
             <div className="cycle-side-stats">
               <div className="cycle-side-stat"><span>Próxima menstruação</span><strong>{nextPeriodLabel(info)}</strong></div>
               <div className="cycle-side-stat"><span>Ovulação estimada</span><strong>Dia {info.ovulationDay}</strong></div>
-              <div className="cycle-side-stat"><span>Fase fértil</span><strong>{info.fertileStart}–{info.fertileEnd}</strong></div>
+              <div className="cycle-side-stat"><span>Janela fértil (estimada)</span><strong>{info.fertileStart}–{info.fertileEnd}</strong></div>
             </div>
           </div>
         </Card>
 
         <div className="grid grid-3">
           <StatCard icon="Droplet" label="Menstruação" value={nextPeriodLabel(info)} hint={periodHint(info)} />
-          <StatCard icon="Sparkles" label="Ovulação" value={ovulationLabel(info)} hint={`Dia ${info.ovulationDay} do ciclo`} tone="purple" />
+          <StatCard icon="Sparkles" label="Ovulação (estimada)" value={ovulationLabel(info)} hint={`Cerca do dia ${info.ovulationDay} · confiança ${info.confidence}`} tone="purple" />
           <StatCard icon="HeartPulse" label="Fase atual" value={info.phaseName} hint={info.isLate ? 'Previsão ultrapassada' : info.day ? `Dia ${info.day} do ciclo` : 'Sem registro'} tone="green" />
         </div>
 

@@ -585,8 +585,14 @@ export function AboutPage() {
         </div>
         <div className="stack">
           <Card><SectionTitle title="Feito para você" /><p className="muted small" style={{ lineHeight: 1.7 }}>O Luna Cycle ajuda você a registrar seu ciclo menstrual e, se desejar, acompanhar a gestação semana a semana. O foco é dar clareza e cuidado, com tudo salvo localmente no seu dispositivo, no seu ritmo.</p></Card>
+          <Card><SectionTitle title="Base das estimativas" subtitle="Transparência sobre como calculamos" /><ul className="small muted" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
+            <li><strong>Ciclo/menstruação:</strong> estimativa por calendário (mediana dos intervalos registrados ou duração de referência) com janela provável quando há variação.</li>
+            <li><strong>Ovulação e janela fértil:</strong> estimadas a partir do ciclo (ex.: ovulação aproximada ~14 dias antes da próxima menstruação prevista). Não confirmam ovulação real e <strong>não servem como método contraceptivo</strong>.</li>
+            <li><strong>Gestação:</strong> semanas, medidas e peso do bebê são aproximações orientativas; curvas usadas no app são arredondadas para referência (OMS/MS, orientação, não diagnóstico).</li>
+            <li><strong>Hormônios/composição corporal:</strong> gráficos e alguns indicadores são educativos/estimados, não exames nem medições clínicas.</li>
+          </ul></Card>
           <Card><SectionTitle title="Privacidade e transparência" /><p className="muted small" style={{ lineHeight: 1.7 }}>Seus registros ficam apenas neste dispositivo. Você pode exportar, fazer backup protegido por senha e excluir seus dados quando quiser.</p><button className="button button-secondary" style={{ marginTop: 10 }} onClick={() => navigate('/app/privacy')}>Ler Privacidade e Termos</button></Card>
-          <Card className="info-callout"><IconCircle icon="Info" tone="blue" /><div><h3>Aviso importante</h3><p>Este aplicativo é informativo e não substitui diagnóstico, tratamento ou acompanhamento de profissionais de saúde.</p></div></Card>
+          <Card className="info-callout"><IconCircle icon="Info" tone="blue" /><div><h3>Aviso importante</h3><p>Conteúdos e estimativas são informativos e de autocuidado. Não substituem diagnóstico, tratamento, método contraceptivo ou acompanhamento de profissionais de saúde. Em caso de sintomas preocupantes, procure avaliação profissional.</p></div></Card>
         </div>
       </div>
     </div>
@@ -599,10 +605,11 @@ export function SupportPage() {
   const [form, setForm] = useState({ subject: '', message: '' })
   const faqs = [
     ['Meus dados ficam na nuvem?', 'Não nesta versão. As informações são salvas somente no armazenamento local do seu navegador/dispositivo e não são enviadas para servidores.'],
-    ['Posso registrar só o meu ciclo?', 'Sim. O app é dedicado ao ciclo menstrual: calendário, menstruação, fluxo, sintomas, humor e bem-estar.'],
+    ['Como o app calcula previsões do ciclo?', 'Usa um método de calendário: mediana dos intervalos entre menstruações registradas (quando há histórico) ou a duração de referência. Mostra confiança/janela provável, mas ciclos variam e a previsão pode errar.'],
+    ['A ovulação/janela fértil são garantidas?', 'Não. São estimativas de calendário (não confirmam ovulação real) e não devem ser usadas como método contraceptivo nem para decisões clínicas.'],
     ['Como faço backup ou exporto meus dados?', 'Acesse Perfil ou Configurações → Dados. Você pode criar um backup protegido por senha ou exportar um arquivo JSON para guardar ou importar depois.'],
     ['Como excluo meus dados?', 'Em Configurações → Dados você pode redefinir os registros ou excluir a conta local. Isso remove as informações deste dispositivo.'],
-    ['As previsões são médicas?', 'Não. São estimativas baseadas nos seus registros e não devem ser usadas como método contraceptivo ou diagnóstico.'],
+    ['As previsões são médicas?', 'Não. São estimativas informativas baseadas nos seus registros e não substituem diagnóstico, tratamento ou acompanhamento profissional.'],
   ]
   const send = (event) => {
     event.preventDefault()
