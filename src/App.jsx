@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { PRIVACY_VERSION } from './data/legal.js'
 import { useApp } from './context/AppContext.jsx'
 import AppShell from './components/AppShell.jsx'
 import PrivacyLockScreen from './components/PrivacyLockScreen.jsx'
@@ -7,12 +8,14 @@ import Welcome from './pages/Welcome.jsx'
 import Auth from './pages/Auth.jsx'
 import Onboarding from './pages/Onboarding.jsx'
 import Dashboard from './pages/Dashboard.jsx'
+import LegalPage, { PublicLegalPage, LegalContent } from './pages/LegalPage.jsx'
 import { CycleCalendarPage, HealthPage, MenstruationPage, MyCyclePage } from './pages/CyclePages.jsx'
 import { DevicesPage, HormonesPage, ReportsPage, SymptomsPage } from './pages/HealthPages.jsx'
 import { MoreMenuPage, BabyPage, DiaryPage, PregnancyCalendarPage, TipsPage, WellnessPage } from './pages/LifestylePages.jsx'
 import {
   AboutPage, NotificationsPage, ProfilePage, RemindersPage, SettingsPage, SupportPage,
 } from './pages/GeneralPages.jsx'
+import { Card } from './components/ui.jsx'
 
 // Caminhos das jornadas antigas continuam redirecionando para o início.
 // Os arquivos dessas telas foram preservados no projeto, mas não fazem parte da navegação ativa.
@@ -61,8 +64,40 @@ function PregnancyOnly({ children }) {
   return phase === 'pregnancy' ? children : <Navigate to="/app" replace />
 }
 
+function ConsentGate() {
+  const { acceptPrivacy, logout } = useApp()
+  const accept = () => acceptPrivacy(PRIVACY_VERSION)
+  return (
+    <div className="consent-gate">
+      <div className="consent-gate-inner">
+        <div className="consent-gate-header">
+          <h1>Privacidade e consentimento</h1>
+          <p>
+            Para continuar usando o Luna Cycle, leia e aceite a Política de Privacidade e os Termos de Uso. Seus dados
+            permanecem salvos apenas neste dispositivo.
+          </p>
+        </div>
+        <LegalContent initialTab="privacy" />
+        <Card className="consent-gate-actions">
+          <p className="muted small" style={{ margin: 0 }}>
+            Ao aceitar, você confirma que leu as informações acima e concorda com o tratamento local dos seus dados para
+            as finalidades descritas.
+          </p>
+          <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
+            <button type="button" className="button button-primary" onClick={accept}>Li e aceito</button>
+            <button type="button" className="button button-secondary" onClick={logout}>Sair da conta</button>
+          </div>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
-  const { authenticated, locked } = useApp()
+  const { authenticated, locked, data } = useApp()
+  const needsConsent = authenticated
+    && data?.settings?.onboardingComplete !== false
+    && data?.settings?.consent?.accepted !== true
   return (
     <>
       <ScrollToTop />
@@ -70,6 +105,8 @@ export default function App() {
         <Route path="/" element={<RootRedirect />} />
         <Route path="/welcome" element={<PublicOnly><Welcome /></PublicOnly>} />
         <Route path="/auth" element={<PublicOnly><Auth /></PublicOnly>} />
+        <Route path="/privacy" element={<PublicLegalPage key="privacy" initialTab="privacy" />} />
+        <Route path="/terms" element={<PublicLegalPage key="terms" initialTab="terms" />} />
         <Route path="/onboarding" element={<OnboardingOnly><Onboarding /></OnboardingOnly>} />
         <Route path="/app" element={<ProtectedLayout />}>
           <Route index element={<Dashboard />} />
@@ -92,6 +129,7 @@ export default function App() {
           <Route path="settings" element={<SettingsPage />} />
           <Route path="about" element={<AboutPage />} />
           <Route path="support" element={<SupportPage />} />
+          <Route path="privacy" element={<LegalPage />} />
           <Route path="more" element={<MoreMenuPage />} />
           {hiddenPaths.map((path) => (
             <Route key={path} path={path} element={<Navigate to="/app" replace />} />
@@ -100,7 +138,8 @@ export default function App() {
         </Route>
         <Route path="*" element={<RootRedirect />} />
       </Routes>
-      {authenticated && locked && <PrivacyLockScreen />}
+      {needsConsent && <ConsentGate />}
+      {authenticated && locked && !needsConsent && <PrivacyLockScreen />}
     </>
   )
 }

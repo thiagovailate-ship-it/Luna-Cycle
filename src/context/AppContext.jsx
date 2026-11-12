@@ -88,6 +88,19 @@ export function AppProvider({ children }) {
     }))
   }, [updateData])
 
+  const acceptPrivacy = useCallback((version) => {
+    updateData((current) => ({
+      settings: {
+        ...current.settings,
+        consent: {
+          accepted: true,
+          version,
+          acceptedAt: new Date().toISOString(),
+        },
+      },
+    }))
+  }, [updateData])
+
   const setDiscreet = useCallback((value) => {
     updateData((current) => ({
       settings: {
@@ -255,6 +268,7 @@ export function AppProvider({ children }) {
     dismissToast,
     updateData,
     setPhase,
+    acceptPrivacy,
     setDiscreet,
     setPrivacySetting,
     setAccessibilitySetting,
@@ -274,7 +288,7 @@ export function AppProvider({ children }) {
     deleteAccount,
   }), [
     db, currentUser, data, phase, authenticated, accessibility, privacy, discreet, locked,
-    quickActionsOpen, toast, showToast, dismissToast, updateData, setPhase, setDiscreet,
+    quickActionsOpen, toast, showToast, dismissToast, updateData, setPhase, acceptPrivacy, setDiscreet,
     setPrivacySetting, setAccessibilitySetting, lockApp, unlockApp, openQuickActions,
     closeQuickActions, login, register, logout, updateProfile, markAllNotificationsRead,
     markNotificationRead, clearNotifications, resetData, importData, deleteAccount,

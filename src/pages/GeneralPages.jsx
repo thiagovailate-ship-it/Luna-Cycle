@@ -187,7 +187,7 @@ export function ProfilePage() {
             <ListRow icon="Heart" title="Jornada de acompanhamento" description={phase === 'pregnancy' ? 'Gravidez ativa' : 'Ciclo menstrual ativo'} meta={<Badge tone="rose">{PHASE_MAP[phase]?.short || 'Ciclo'}</Badge>} onClick={() => navigate('/app/settings', { state: { tab: 'journey' } })} tone="peach" />
             <ListRow icon="Bell" title="Notificações" description="Preferências e alertas" meta={<Icon name="ChevronRight" size={16} />} onClick={() => navigate('/app/notifications')} tone="blue" />
             <ListRow icon="Watch" title="Dispositivos conectados" description="Pulseira Luna Cycle" meta={<Icon name="ChevronRight" size={16} />} onClick={() => navigate('/app/devices')} tone="green" />
-            <ListRow icon="ShieldCheck" title="Privacidade e segurança" description="Seus dados no navegador" meta={<Icon name="ChevronRight" size={16} />} onClick={() => navigate('/app/settings')} tone="purple" />
+            <ListRow icon="ShieldCheck" title="Privacidade e termos" description="Como seus dados são tratados" meta={<Icon name="ChevronRight" size={16} />} onClick={() => navigate('/app/privacy')} tone="purple" />
             <ListRow icon="Info" title="Sobre o Luna Cycle" description="Versão 2.0.0" meta={<Icon name="ChevronRight" size={16} />} onClick={() => navigate('/app/about')} />
             <ListRow icon="CircleHelp" title="Ajuda e suporte" description="Perguntas frequentes" meta={<Icon name="ChevronRight" size={16} />} onClick={() => navigate('/app/support')} tone="peach" />
           </div></Card>
@@ -483,6 +483,11 @@ export function SettingsPage() {
               <button className={`button ${discreet ? 'button-primary' : 'button-secondary'}`} onClick={() => setDiscreet(!discreet)}><EyeOff size={16} /> {discreet ? 'Desativar modo discreto' : 'Testar modo discreto'}</button>
             </div>
             <div className="divider" />
+            <SectionTitle title="Transparência" subtitle="Entenda seus direitos e o tratamento local" />
+            <button className="button button-secondary" type="button" onClick={() => navigate('/app/privacy')}>
+              <ShieldCheck size={16} /> Ler Política de Privacidade e Termos
+            </button>
+            <div className="divider" />
             <SectionTitle title="Seus dados" subtitle="Você continua no controle" />
             <Toggle label="Compartilhar dados de uso (em breve)" description="Nenhum dado sai deste dispositivo nesta versão" checked={Boolean(privacy.usageData)} disabled onChange={() => {}} />
             <Toggle label="Compartilhar com profissional (em breve)" description="Por enquanto, use o relatório em PDF ou CSV" checked={Boolean(privacy.shareWithProfessional)} disabled onChange={() => {}} />
@@ -567,19 +572,20 @@ export function AboutPage() {
   const navigate = useNavigate()
   return (
     <div>
-      <PageHeader eyebrow="Luna Cycle" title="Sobre o aplicativo" description="Um companheiro para entender e acolher seu ciclo menstrual." back onBack={() => navigate(-1)} />
+      <PageHeader eyebrow="Luna Cycle" title="Sobre o aplicativo" description="Um companheiro para acolher seu ciclo e, quando você quiser, acompanhar sua gestação." back onBack={() => navigate(-1)} />
       <div className="split-layout">
         <div className="stack">
-          <Card className="card-blush center" style={{ padding: 36 }}><IconCircle icon="MoonStar" tone="rose" size="large" /><h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 44, margin: '15px 0 6px' }}>Luna Cycle</h2><p className="muted small">Seu ciclo, no seu ritmo.</p><Badge tone="rose">Versão 2.0.0 · Ciclo menstrual</Badge></Card>
+          <Card className="card-blush center" style={{ padding: 36 }}><IconCircle icon="MoonStar" tone="rose" size="large" /><h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 44, margin: '15px 0 6px' }}>Luna Cycle</h2><p className="muted small">Seu corpo, no seu ritmo.</p><Badge tone="rose">Versão 2.0.0</Badge></Card>
           <Card><SectionTitle title="O que você encontra aqui" /><div className="grid grid-2">{[
             ['CalendarDays', 'Calendário do ciclo', 'Menstruação, fertilidade e ovulação'],
-            ['Stethoscope', 'Sintomas e fluxo', 'Humor, intensidade e dia a dia'],
-            ['HeartPulse', 'Bem-estar', 'Sono, temperatura e sinais vitais'],
+            ['Baby', 'Jornada de gravidez', 'Semanas, consultas e desenvolvimento do bebê'],
+            ['Stethoscope', 'Sintomas e bem-estar', 'Humor, intensidade e dia a dia'],
             ['ChartColumn', 'Relatórios', 'Padrões, tendências e histórico'],
           ].map(([icon, title, description]) => <ListRow key={title} icon={icon} title={title} description={description} />)}</div></Card>
         </div>
         <div className="stack">
-          <Card><SectionTitle title="Feito para você" /><p className="muted small" style={{ lineHeight: 1.7 }}>O Luna Cycle é focado no ciclo menstrual: registre a menstruação, acompanhe o fluxo dia a dia, entenda sintomas e humor, descubra padrões e mantenha sua rotina de cuidados organizada. Tudo salvo localmente, no seu ritmo.</p></Card>
+          <Card><SectionTitle title="Feito para você" /><p className="muted small" style={{ lineHeight: 1.7 }}>O Luna Cycle ajuda você a registrar seu ciclo menstrual e, se desejar, acompanhar a gestação semana a semana. O foco é dar clareza e cuidado, com tudo salvo localmente no seu dispositivo, no seu ritmo.</p></Card>
+          <Card><SectionTitle title="Privacidade e transparência" /><p className="muted small" style={{ lineHeight: 1.7 }}>Seus registros ficam apenas neste dispositivo. Você pode exportar, fazer backup protegido por senha e excluir seus dados quando quiser.</p><button className="button button-secondary" style={{ marginTop: 10 }} onClick={() => navigate('/app/privacy')}>Ler Privacidade e Termos</button></Card>
           <Card className="info-callout"><IconCircle icon="Info" tone="blue" /><div><h3>Aviso importante</h3><p>Este aplicativo é informativo e não substitui diagnóstico, tratamento ou acompanhamento de profissionais de saúde.</p></div></Card>
         </div>
       </div>
@@ -592,9 +598,10 @@ export function SupportPage() {
   const navigate = useNavigate()
   const [form, setForm] = useState({ subject: '', message: '' })
   const faqs = [
-    ['Meus dados ficam na nuvem?', 'Não nesta versão. As informações são salvas somente no armazenamento local do seu navegador.'],
+    ['Meus dados ficam na nuvem?', 'Não nesta versão. As informações são salvas somente no armazenamento local do seu navegador/dispositivo e não são enviadas para servidores.'],
     ['Posso registrar só o meu ciclo?', 'Sim. O app é dedicado ao ciclo menstrual: calendário, menstruação, fluxo, sintomas, humor e bem-estar.'],
-    ['Como faço backup?', 'Acesse Perfil ou Configurações → Dados e exporte um arquivo JSON. Você pode importá-lo depois.'],
+    ['Como faço backup ou exporto meus dados?', 'Acesse Perfil ou Configurações → Dados. Você pode criar um backup protegido por senha ou exportar um arquivo JSON para guardar ou importar depois.'],
+    ['Como excluo meus dados?', 'Em Configurações → Dados você pode redefinir os registros ou excluir a conta local. Isso remove as informações deste dispositivo.'],
     ['As previsões são médicas?', 'Não. São estimativas baseadas nos seus registros e não devem ser usadas como método contraceptivo ou diagnóstico.'],
   ]
   const send = (event) => {

@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext.jsx'
+import { PRIVACY_VERSION } from '../data/legal.js'
 import { AppIcon } from '../components/AppIcon.jsx'
 import { CycleHeroArt } from '../components/CycleArt.jsx'
 import { DurationInput, Field, Logo } from '../components/ui.jsx'
@@ -16,6 +17,7 @@ export default function Onboarding() {
     periodLength: '5',
     regularity: 'regular',
   })
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(Boolean(currentUser?.demo))
   const [error, setError] = useState('')
 
   const patch = (key, value) => {
@@ -24,8 +26,16 @@ export default function Onboarding() {
   }
 
   const finish = () => {
+    if (!acceptedPrivacy) {
+      setError('Para continuar, leia e aceite a Política de Privacidade e os Termos de Uso.')
+      return
+    }
     updateData((current) => ({
-      settings: { ...current.settings, onboardingComplete: true },
+      settings: {
+        ...current.settings,
+        onboardingComplete: true,
+        consent: { accepted: true, version: PRIVACY_VERSION, acceptedAt: new Date().toISOString() },
+      },
     }))
     navigate('/app', { replace: true })
   }
@@ -33,6 +43,10 @@ export default function Onboarding() {
   const submit = (event) => {
     event.preventDefault()
     setError('')
+    if (!acceptedPrivacy) {
+      setError('Para continuar, leia e aceite a Política de Privacidade e os Termos de Uso.')
+      return
+    }
     if (!form.lastPeriod) {
       setError('Escolha a data aproximada do primeiro dia da sua última menstruação.')
       return
@@ -67,6 +81,7 @@ export default function Onboarding() {
           periodLength: durations.periodLength,
           cycleRegularity: form.regularity,
           onboardingComplete: true,
+          consent: { accepted: true, version: PRIVACY_VERSION, acceptedAt: new Date().toISOString() },
         },
         notifications: [
           {
@@ -145,6 +160,20 @@ export default function Onboarding() {
               </div>
             </fieldset>
 
+            <div className="onboarding-consent">
+              <label className="consent-check">
+                <input
+                  type="checkbox"
+                  checked={acceptedPrivacy}
+                  onChange={(event) => { setAcceptedPrivacy(event.target.checked); setError('') }}
+                />
+                <span>
+                  Li e aceito a <Link to="/privacy" target="_blank" rel="noreferrer">Política de Privacidade</Link> e os{' '}
+                  <Link to="/privacy" target="_blank" rel="noreferrer">Termos de Uso</Link>. Entendo que meus dados ficam
+                  salvos apenas neste dispositivo e que o app não substitui orientação médica.
+                </span>
+              </label>
+            </div>
             {error && <div className="error-message">{error}</div>}
             <button className="button button-primary button-block" type="submit">Começar meu acompanhamento</button>
           </form>

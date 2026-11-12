@@ -1,3 +1,5 @@
+import babyIllustration from '../assets/baby-illustration.png'
+
 export function HeroArt({ className = '', variant = 'woman' }) {
   if (variant === 'moon') {
     return (
@@ -37,97 +39,16 @@ export function HeroArt({ className = '', variant = 'woman' }) {
   )
 }
 
-export function BabyArt({ className = '' }) {
+export function BabyArt({ className = '', alt = 'Ilustração do bebê na barriga' }) {
   return (
-    <svg className={className} viewBox="0 0 340 330" fill="none" aria-hidden="true">
-      <defs>
-        <radialGradient id="baby-womb-fill" cx="42%" cy="34%" r="74%">
-          <stop offset="0%" stopColor="#FFF4F2" />
-          <stop offset="42%" stopColor="#FAD7DB" />
-          <stop offset="76%" stopColor="#F1B3BF" />
-          <stop offset="100%" stopColor="#E5A0AE" />
-        </radialGradient>
-        <linearGradient id="baby-womb-rim" x1="60" y1="30" x2="300" y2="310" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#F3C0CA" />
-          <stop offset=".55" stopColor="#E6A3B1" />
-          <stop offset="1" stopColor="#D98697" />
-        </linearGradient>
-        <radialGradient id="baby-head-skin" cx="38%" cy="28%" r="78%">
-          <stop offset="0%" stopColor="#FFF2E7" />
-          <stop offset="55%" stopColor="#F9CDBC" />
-          <stop offset="100%" stopColor="#EDA596" />
-        </radialGradient>
-        <linearGradient id="baby-body-skin" x1="170" y1="140" x2="235" y2="260" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#FBE0D2" />
-          <stop offset=".55" stopColor="#F5C4B2" />
-          <stop offset="1" stopColor="#EAA091" />
-        </linearGradient>
-        <linearGradient id="baby-limb-skin" x1="160" y1="150" x2="210" y2="280" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#FBDCCD" />
-          <stop offset="1" stopColor="#EDA898" />
-        </linearGradient>
-        <linearGradient id="baby-cord" x1="90" y1="180" x2="170" y2="210" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#EFB3C2" />
-          <stop offset="1" stopColor="#E295A9" />
-        </linearGradient>
-        <filter id="baby-blur" x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur stdDeviation="12" />
-        </filter>
-      </defs>
-
-      <ellipse cx="172" cy="166" rx="158" ry="164" fill="#F6C8D1" opacity=".32" filter="url(#baby-blur)" />
-
-      <g transform="rotate(-7 172 166)">
-        <ellipse cx="172" cy="166" rx="143" ry="151" fill="url(#baby-womb-rim)" />
-        <ellipse cx="172" cy="166" rx="135" ry="143" fill="url(#baby-womb-fill)" />
-        <ellipse cx="167" cy="157" rx="112" ry="120" stroke="#FFF" strokeOpacity=".3" strokeWidth="2" />
-      </g>
-
-      <g strokeLinecap="round" fill="none">
-        <path d="M171 207c-20 7-32-6-48-4-13 2-22-8-29-20" stroke="url(#baby-cord)" strokeWidth="8" />
-        <path d="M171 207c-20 7-32-6-48-4-13 2-22-8-29-20" stroke="#FBD3DC" strokeWidth="2.6" strokeDasharray="5 7" opacity=".9" />
-      </g>
-
-      <ellipse cx="196" cy="246" rx="52" ry="16" fill="#D98B9C" opacity=".18" filter="url(#baby-blur)" />
-
-      <path d="M222 218c-20 18-42 22-58 15" stroke="#E5A093" strokeWidth="23" strokeLinecap="round" />
-      <path d="M164 233c-13 3-22 12-24 24" stroke="#E5A093" strokeWidth="20" strokeLinecap="round" />
-      <ellipse cx="139" cy="262" rx="14" ry="9" transform="rotate(-24 139 262)" fill="#F0B7A8" />
-      <path d="M131 258c3-1 7 0 10 2" stroke="#DF9C8E" strokeWidth="1.4" strokeLinecap="round" />
-
-      <path d="M208 143c25 6 41 29 40 53-1 23-16 40-37 44-24 5-45-9-52-31-7-22 2-43 18-55 10-7 21-12 31-11Z" fill="url(#baby-body-skin)" />
-      <path d="M240 166c10 18 8 40-6 53" stroke="#E3A092" strokeWidth="2.4" opacity=".5" strokeLinecap="round" />
-      <ellipse cx="188" cy="206" rx="25" ry="30" transform="rotate(-18 188 206)" fill="#FBE2D5" opacity=".5" />
-
-      <path d="M218 209c-13 20-30 30-46 27-12-2-20 8-17 19 3 12 15 18 27 14" stroke="url(#baby-limb-skin)" strokeWidth="27" strokeLinecap="round" />
-      <ellipse cx="188" cy="274" rx="16" ry="10" transform="rotate(10 188 274)" fill="#F9D2C3" />
-      <path d="M178 270c3-2 8-2 11 0" stroke="#E3A294" strokeWidth="1.6" strokeLinecap="round" />
-
-      <path d="M215 162c-6 13-6 24-1 33" stroke="#EEB2A1" strokeWidth="16" strokeLinecap="round" />
-
-      <g transform="rotate(-12 224 112)">
-        <ellipse cx="224" cy="112" rx="46" ry="48" fill="url(#baby-head-skin)" />
-        <path d="M231 64c20 6 33 21 36 41" stroke="#E3A096" strokeWidth="3" opacity=".45" strokeLinecap="round" />
-        <path d="M244 107c7 2 9 10 5 16-3 5-9 6-12 3" fill="#F2B4A6" stroke="#DC9288" strokeWidth="2.2" />
-        <path d="M246 112c3 2 3 6 1 9" stroke="#DC9288" strokeWidth="1.6" strokeLinecap="round" opacity=".8" />
-        <path d="M183 87c-6 11-8 23-5 33 2 6-1 10 2 15 3 5 9 7 15 6" stroke="#E2A094" strokeWidth="2.1" strokeLinecap="round" opacity=".6" />
-        <path d="M180 123c3 4 8 5 12 2" stroke="#DC9288" strokeWidth="2" strokeLinecap="round" />
-        <path d="M187 134c4 2 8 2 11-1" stroke="#CD8287" strokeWidth="2" strokeLinecap="round" />
-        <path d="M189 111c5 4 11 4 16 0" stroke="#B96F6F" strokeWidth="2.3" strokeLinecap="round" />
-        <path d="M190 115c1 2 3 3 5 3" stroke="#B96F6F" strokeWidth="1.4" strokeLinecap="round" opacity=".7" />
-        <path d="M189 103c5-3 11-3 16 0" stroke="#E0A094" strokeWidth="2" strokeLinecap="round" opacity=".6" />
-        <ellipse cx="204" cy="126" rx="12" ry="9" transform="rotate(-12 204 126)" fill="#F7B9A8" opacity=".4" />
-        <path d="M197 73c8-9 21-14 33-12" stroke="#E7AA9D" strokeWidth="6" strokeLinecap="round" opacity=".28" />
-      </g>
-
-      <path d="M215 163c-6 12-4 23 3 30" stroke="#F2BCAB" strokeWidth="17" strokeLinecap="round" />
-      <path d="M214 170c1 8 2 15 5 20" stroke="#FBDCCD" strokeWidth="7" strokeLinecap="round" opacity=".4" />
-      <path d="M218 191c-6-5-10-11-11-18" stroke="#F2BCAB" strokeWidth="14" strokeLinecap="round" />
-      <ellipse cx="206" cy="167" rx="11" ry="10" transform="rotate(-30 206 167)" fill="#F8CDBC" />
-      <path d="M200 163c2-2 5-3 8-2" stroke="#E3A294" strokeWidth="1.5" strokeLinecap="round" />
-
-      <ellipse cx="198" cy="92" rx="16" ry="22" transform="rotate(-18 198 92)" fill="#FFF" opacity=".22" />
-    </svg>
+    <img
+      src={babyIllustration}
+      alt={alt}
+      className={className}
+      loading="eager"
+      decoding="async"
+      draggable="false"
+    />
   )
 }
 

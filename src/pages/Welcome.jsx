@@ -42,6 +42,9 @@ export default function Welcome() {
           <Link className="button button-primary button-block" to="/auth?mode=register">Começar agora</Link>
           <Link className="button button-ghost button-block" to="/auth?mode=login">Já tem uma conta? Entrar</Link>
           <div className="demo-note"><strong>Conta de demonstração:</strong> demo@lunacycle.app · senha luna123</div>
+          <p className="muted small center" style={{ marginTop: 14 }}>
+            <Link to="/privacy">Política de Privacidade</Link> · <Link to="/terms">Termos de Uso</Link>
+          </p>
         </div>
       </section>
     </div>

@@ -185,6 +185,7 @@ export function createDefaultData(name = 'Luciene Oliveira', email = 'luciene@em
       language: 'pt-BR',
       deviceConnected: true,
       lastBackupAt: null,
+      consent: { accepted: false, version: null, acceptedAt: null },
     },
     cycle: {
       entries: [
@@ -287,6 +288,7 @@ export function createEmptyData(name = 'Você', email = '') {
       language: 'pt-BR',
       deviceConnected: false,
       lastBackupAt: null,
+      consent: { accepted: false, version: null, acceptedAt: null },
     },
     cycle: { entries: [] },
     periodDays: [],

@@ -118,6 +118,9 @@ export default function Auth() {
             <AppIcon name="PlayCircle" size={18} /> Explorar conta de demonstração
           </button>
           <div className="demo-note"><strong>Demo:</strong> demo@lunacycle.app · senha luna123</div>
+          <p className="muted small center" style={{ marginTop: 14 }}>
+            Ao continuar, você concorda com a <Link to="/privacy">Política de Privacidade</Link> e os <Link to="/terms">Termos de Uso</Link>.
+          </p>
         </div>
       </section>
     </div>

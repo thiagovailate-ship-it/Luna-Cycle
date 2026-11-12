@@ -25,6 +25,7 @@ export function normalizeUserData(rawData = {}) {
   )
   const settings = rawData?.settings || {}
   const phase = settings.phase === 'pregnancy' ? 'pregnancy' : 'cycle'
+  const consent = { ...(defaults.settings.consent || {}), ...(settings.consent || {}) }
   return {
     ...defaults,
     ...rawData,
@@ -36,6 +37,7 @@ export function normalizeUserData(rawData = {}) {
       notifications: { ...defaults.settings.notifications, ...(settings.notifications || {}) },
       privacy: { ...defaults.settings.privacy, ...(settings.privacy || {}) },
       accessibility: { ...defaults.settings.accessibility, ...(settings.accessibility || {}) },
+      consent,
     },
     cycle: { ...defaults.cycle, ...(rawData?.cycle || {}) },
     periodDays: Array.isArray(rawData?.periodDays) ? rawData.periodDays : defaults.periodDays,
@@ -57,6 +59,9 @@ export function normalizeUserData(rawData = {}) {
 
 function createDemoUser() {
   const salt = 'luna-demo-salt'
+  const createdAt = new Date().toISOString()
+  const data = normalizeUserData(createDefaultData('Luciene Oliveira', 'demo@lunacycle.app', 'cycle'))
+  data.settings.consent = { accepted: true, version: '2026-11-12', acceptedAt: createdAt }
   return {
     id: 'user-demo',
     name: 'Luciene Oliveira',
@@ -64,8 +69,8 @@ function createDemoUser() {
     salt,
     passwordHash: hashPassword('luna123', salt),
     demo: true,
-    createdAt: new Date().toISOString(),
-    data: normalizeUserData(createDefaultData('Luciene Oliveira', 'demo@lunacycle.app', 'cycle')),
+    createdAt,
+    data,
   }
 }
 
@@ -87,7 +92,17 @@ export function loadDb() {
       ...parsed,
       version: 1,
       currentUserId: parsed.users.some((user) => user.id === parsed.currentUserId) ? parsed.currentUserId : null,
-      users: parsed.users.map((user) => ({ ...user, data: normalizeUserData(user.data) })),
+      users: parsed.users.map((user) => {
+        const data = normalizeUserData(user.data)
+        if (user.demo || user.id === 'user-demo' || user.email === 'demo@lunacycle.app') {
+          data.settings.consent = {
+            accepted: true,
+            version: data.settings.consent?.version || '2026-11-12',
+            acceptedAt: data.settings.consent?.acceptedAt || user.createdAt || new Date().toISOString(),
+          }
+        }
+        return { ...user, data }
+      }),
     }
     if (parsed.version !== 1) saveDb(migrated)
     return migrated

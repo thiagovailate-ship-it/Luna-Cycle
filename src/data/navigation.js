@@ -17,6 +17,7 @@ export const ALL_LINKS = [
   { to: '/app/settings', label: 'Configurações', icon: 'Settings', group: 'Conta' },
   { to: '/app/about', label: 'Sobre o Luna Cycle', icon: 'Info', group: 'Conta' },
   { to: '/app/support', label: 'Ajuda e suporte', icon: 'CircleHelp', group: 'Conta' },
+  { to: '/app/privacy', label: 'Privacidade e termos', icon: 'ShieldCheck', group: 'Conta' },
 ]
 
 // Jornada de gravidez: navegação ativa quando settings.phase === 'pregnancy'.
@@ -35,6 +36,7 @@ export const PREGNANCY_LINKS = [
   { to: '/app/profile', label: 'Perfil', icon: 'User', group: 'Conta' },
   { to: '/app/settings', label: 'Configurações', icon: 'Settings', group: 'Conta' },
   { to: '/app/support', label: 'Ajuda e suporte', icon: 'CircleHelp', group: 'Conta' },
+  { to: '/app/privacy', label: 'Privacidade e termos', icon: 'ShieldCheck', group: 'Conta' },
 ]
 
 // Preservado para uma possível reativação futura. Não aparece na interface.
@@ -81,14 +83,14 @@ const activeGroups = [
   { title: 'Meu ciclo', items: ['/app', '/app/cycle-calendar', '/app/menstruation', '/app/my-cycle'] },
   { title: 'Saúde', items: ['/app/health', '/app/symptoms', '/app/hormones', '/app/reports', '/app/devices'] },
   { title: 'Cuidados', items: ['/app/reminders', '/app/wellness', '/app/tips', '/app/notifications'] },
-  { title: 'Conta', items: ['/app/profile', '/app/settings', '/app/about', '/app/support'] },
+  { title: 'Conta', items: ['/app/profile', '/app/settings', '/app/about', '/app/support', '/app/privacy'] },
 ]
 
 const pregnancyGroups = [
   { title: 'Minha gestação', items: ['/app', '/app/baby', '/app/calendar', '/app/diary'] },
   { title: 'Saúde', items: ['/app/health', '/app/symptoms', '/app/reports'] },
   { title: 'Cuidados', items: ['/app/reminders', '/app/wellness', '/app/tips', '/app/notifications'] },
-  { title: 'Conta', items: ['/app/profile', '/app/settings', '/app/support'] },
+  { title: 'Conta', items: ['/app/profile', '/app/settings', '/app/support', '/app/privacy'] },
 ]
 
 export function getAllLinks(phase = 'cycle') {
